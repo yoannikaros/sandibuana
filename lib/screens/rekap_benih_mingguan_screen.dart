@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'dart:io';
 import '../models/rekap_benih_mingguan_model.dart';
+import '../models/catatan_pembenihan_model.dart';
 import '../providers/rekap_benih_mingguan_provider.dart';
 
 class RekapBenihMingguanScreen extends StatefulWidget {
@@ -193,7 +194,7 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Cari jenis benih atau catatan...',
+              hintText: 'Cari catatan pembenihan...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -219,11 +220,22 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
           const SizedBox(height: 8),
           Consumer<RekapBenihMingguanProvider>(
             builder: (context, provider, child) {
-              final hasActiveFilters = provider.selectedJenisBenih != null ||
+              final hasActiveFilters = provider.selectedIdPembenihan != null ||
                   provider.startDate != null ||
                   provider.endDate != null;
 
               if (!hasActiveFilters) return const SizedBox.shrink();
+
+              CatatanPembenihanModel? selectedPembenihan;
+              if (provider.selectedIdPembenihan != null) {
+                try {
+                  selectedPembenihan = provider.pembenihanList.firstWhere(
+                    (p) => p.idPembenihan == provider.selectedIdPembenihan,
+                  );
+                } catch (e) {
+                  selectedPembenihan = null;
+                }
+              }
 
               return Container(
                 width: double.infinity,
@@ -231,10 +243,10 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                 child: Wrap(
                   spacing: 8,
                   children: [
-                    if (provider.selectedJenisBenih != null)
+                    if (selectedPembenihan != null)
                       _buildFilterChip(
-                        'Jenis: ${provider.selectedJenisBenih}',
-                        () => provider.setSelectedJenisBenih(null),
+                        'Pembenihan: ${selectedPembenihan.kodeBatch} - ${selectedPembenihan.mediaTanam ?? 'No media'}',
+                        () => provider.setSelectedIdPembenihan(null),
                       ),
                     if (provider.startDate != null)
                       _buildFilterChip(
@@ -353,35 +365,47 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
   }
 
   Widget _buildRekapCard(RekapBenihMingguanModel rekap) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      child: InkWell(
-        onTap: () => _showDetailDialog(rekap),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return Consumer<RekapBenihMingguanProvider>(
+      builder: (context, provider, child) {
+        CatatanPembenihanModel? pembenihan;
+        try {
+          pembenihan = provider.pembenihanList.firstWhere(
+            (p) => p.idPembenihan == rekap.idPembenihan,
+          );
+        } catch (e) {
+          pembenihan = null;
+        }
+        
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          child: InkWell(
+            onTap: () => _showDetailDialog(rekap),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: rekap.getJenisBenihColor().withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: rekap.getJenisBenihColor().withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      rekap.jenisBenih,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: rekap.getJenisBenihColor(),
-                      ),
-                    ),
-                  ),
+                  Row(
+                    children: [
+                      if (pembenihan != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            '${pembenihan.kodeBatch} - ${pembenihan.mediaTanam ?? 'No media'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ),
                   const Spacer(),
                   PopupMenuButton<String>(
                     onSelected: (value) {
@@ -466,12 +490,14 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                     ),
                   ],
                 ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+                   ],
+                 ],
+               ),
+             ),
+           ),
+         );
+       },
+     );
   }
 
   void _showFilterDialog() {
@@ -487,26 +513,26 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: provider.selectedJenisBenih,
+                  value: provider.selectedIdPembenihan,
                   decoration: const InputDecoration(
-                    labelText: 'Jenis Benih',
+                    labelText: 'Catatan Pembenihan',
                     border: OutlineInputBorder(),
                   ),
                   items: [
                     const DropdownMenuItem<String>(
                       value: null,
-                      child: Text('Semua Jenis'),
+                      child: Text('Semua Catatan'),
                     ),
-                    ...RekapBenihMingguanModel.getJenisBenihOptions().map(
-                      (jenis) => DropdownMenuItem<String>(
-                        value: jenis,
-                        child: Text(jenis),
+                    ...provider.pembenihanList.map(
+                      (pembenihan) => DropdownMenuItem<String>(
+                        value: pembenihan.idPembenihan,
+                        child: Text('${pembenihan.kodeBatch} - ${pembenihan.mediaTanam ?? 'No media'}'),
                       ),
                     ),
                   ],
                   onChanged: (value) {
                     setState(() {
-                      provider.setSelectedJenisBenih(value);
+                      provider.setSelectedIdPembenihan(value);
                     });
                   },
                 ),
@@ -608,14 +634,14 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
               _buildStatItem('Total Rekap', provider.rekapList.length.toString()),
               _buildStatItem('Total Nampan', provider.getTotalNampan().toString()),
               _buildStatItem('Rata-rata per Rekap', provider.getAverageNampanPerRekap().toStringAsFixed(1)),
-              _buildStatItem('Jenis Terpopuler', provider.getMostPopularJenisBenih()),
+              _buildStatItem('Pembenihan Terpopuler', provider.getMostPopularPembenihan()),
               const SizedBox(height: 16),
               const Text(
-                'Distribusi per Jenis:',
+                'Distribusi per Pembenihan:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ...provider.getDistributionByJenisBenih().entries.map(
+              ...provider.getDistributionByPembenihan().entries.map(
                 (entry) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
@@ -660,15 +686,28 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
   }
 
   void _showDetailDialog(RekapBenihMingguanModel rekap) {
+    final provider = Provider.of<RekapBenihMingguanProvider>(context, listen: false);
+    CatatanPembenihanModel? pembenihan;
+    try {
+      pembenihan = provider.pembenihanList.firstWhere(
+        (p) => p.idPembenihan == rekap.idPembenihan,
+      );
+    } catch (e) {
+      pembenihan = null;
+    }
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Detail Rekap - ${rekap.jenisBenih}'),
+        title: Text('Detail Rekap - ${pembenihan?.kodeBatch ?? 'Unknown'}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Jenis Benih', rekap.jenisBenih, Icons.eco),
+            if (pembenihan != null) ...[
+              _buildDetailRow('Kode Batch', pembenihan.kodeBatch, Icons.eco),
+              _buildDetailRow('Media Tanam', pembenihan.mediaTanam ?? 'Tidak ada', Icons.nature),
+            ],
             _buildDetailRow('Jumlah Nampan', rekap.formattedJumlahNampan, Icons.eco),
             _buildDetailRow('Periode', rekap.formattedPeriode, Icons.date_range),
             if (rekap.catatan != null && rekap.catatan!.isNotEmpty)
@@ -733,7 +772,7 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
     
     DateTime tanggalMulai = rekap?.tanggalMulai ?? DateTime.now();
     DateTime tanggalSelesai = rekap?.tanggalSelesai ?? DateTime.now().add(const Duration(days: 6));
-    String jenisBenih = rekap?.jenisBenih ?? 'Selada';
+    String? idPembenihan = rekap?.idPembenihan;
     int jumlahNampan = rekap?.jumlahNampan ?? 1;
     String catatan = rekap?.catatan ?? '';
 
@@ -807,28 +846,32 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: jenisBenih,
-                      decoration: const InputDecoration(
-                        labelText: 'Jenis Benih',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: RekapBenihMingguanModel.getJenisBenihOptions().map(
-                        (jenis) => DropdownMenuItem<String>(
-                          value: jenis,
-                          child: Text(jenis),
-                        ),
-                      ).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          jenisBenih = value!;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Jenis benih harus dipilih';
-                        }
-                        return null;
+                    Consumer<RekapBenihMingguanProvider>(
+                      builder: (context, provider, child) {
+                        return DropdownButtonFormField<String>(
+                          value: idPembenihan,
+                          decoration: const InputDecoration(
+                            labelText: 'Catatan Pembenihan',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: provider.pembenihanList.map(
+                            (pembenihan) => DropdownMenuItem<String>(
+                              value: pembenihan.idPembenihan,
+                              child: Text('${pembenihan.kodeBatch} - ${pembenihan.mediaTanam ?? 'No media'}'),
+                            ),
+                          ).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              idPembenihan = value;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Catatan pembenihan harus dipilih';
+                            }
+                            return null;
+                          },
+                        );
                       },
                     ),
                     const SizedBox(height: 16),
@@ -886,7 +929,7 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                   idRekap: rekap?.idRekap,
                   tanggalMulai: tanggalMulai,
                   tanggalSelesai: tanggalSelesai,
-                  jenisBenih: jenisBenih,
+                  idPembenihan: idPembenihan,
                   jumlahNampan: jumlahNampan,
                   catatan: catatan.isNotEmpty ? catatan : null,
                   dicatatOleh: rekap?.dicatatOleh ?? '',
@@ -926,11 +969,12 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
   }
 
   void _showDeleteConfirmation(RekapBenihMingguanModel rekap) {
+    final provider = Provider.of<RekapBenihMingguanProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
-        content: Text('Apakah Anda yakin ingin menghapus rekap ${rekap.jenisBenih} (${rekap.formattedJumlahNampan})?'),
+        content: Text('Apakah Anda yakin ingin menghapus rekap ${provider.getPembenihanName(rekap.idPembenihan)} (${rekap.formattedJumlahNampan})?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -1066,7 +1110,7 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                       ],
                     ),
                     pw.SizedBox(height: 4),
-                    pw.Text('Jenis Terpopuler: ${provider.getMostPopularJenisBenih()}'),
+                    pw.Text('Pembenihan Terpopuler: ${provider.getMostPopularPembenihan()}'),
                   ],
                 ),
               ),
@@ -1156,7 +1200,7 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text(rekap.jenisBenih),
+                            child: pw.Text(provider.getPembenihanName(rekap.idPembenihan)),
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8),
@@ -1229,7 +1273,7 @@ class _RekapBenihMingguanScreenState extends State<RekapBenihMingguanScreen> {
                       ),
                     ],
                   ),
-                  ...provider.getDistributionByJenisBenih().entries.map(
+                  ...provider.getDistributionByPembenihan().entries.map(
                     (entry) => pw.TableRow(
                       children: [
                         pw.Padding(

@@ -243,12 +243,13 @@ class TandonProvider with ChangeNotifier {
   void _applyMonitoringNutrisiFilter() {
     _filteredMonitoringNutrisiList = List.from(_monitoringNutrisiList);
     
-    // Filter by tandon
-    if (_selectedTandonId.isNotEmpty) {
-      _filteredMonitoringNutrisiList = _filteredMonitoringNutrisiList
-          .where((monitoring) => monitoring.idTandon == _selectedTandonId)
-          .toList();
-    }
+    // Filter by tandon - MonitoringNutrisiModel doesn't have idTandon property
+    // This filter is not applicable for this model
+    // if (_selectedTandonId.isNotEmpty) {
+    //   _filteredMonitoringNutrisiList = _filteredMonitoringNutrisiList
+    //       .where((monitoring) => monitoring.idTandon == _selectedTandonId)
+    //       .toList();
+    // }
     
     // Filter by date range
     if (_startDate != null && _endDate != null) {

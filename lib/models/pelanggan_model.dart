@@ -114,8 +114,10 @@ class PelangganModel {
     }
   }
 
-  // Static method to get jenis pelanggan options
+  // Static method to get jenis pelanggan options (fallback)
   static List<String> get jenisPelangganOptions => ['restoran', 'hotel', 'individu'];
   
   static List<String> get jenisPelangganDisplayOptions => ['Restoran', 'Hotel', 'Individu'];
+  
+  // Note: For dynamic options from SQLite, use JenisPelangganProvider
 }

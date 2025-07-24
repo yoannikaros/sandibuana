@@ -5,6 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../models/jadwal_pemupukan_model.dart';
 import '../providers/jadwal_pemupukan_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/perlakuan_pupuk_provider.dart';
+import 'perlakuan_pupuk_screen.dart';
 
 class JadwalPemupukanScreen extends StatefulWidget {
   const JadwalPemupukanScreen({super.key});
@@ -40,6 +42,18 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PerlakuanPupukScreen(),
+                ),
+              );
+            },
+            tooltip: 'Kelola Perlakuan Pupuk',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -727,18 +741,26 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                   const SizedBox(height: 16),
                   
                   // Perlakuan Pupuk
-                  Consumer<JadwalPemupukanProvider>(
+                  Consumer<PerlakuanPupukProvider>(
                     builder: (context, provider, child) {
+                      final activePerlakuan = provider.activePerlakuanPupukList;
+                      
+                      // Validasi selectedPerlakuan
+                      if (selectedPerlakuan.isNotEmpty && 
+                          !activePerlakuan.any((p) => p.namaPerlakuan == selectedPerlakuan)) {
+                        selectedPerlakuan = '';
+                      }
+                      
                       return DropdownButtonFormField<String>(
                         value: selectedPerlakuan.isEmpty ? null : selectedPerlakuan,
                         decoration: const InputDecoration(
                           labelText: 'Perlakuan Pupuk',
                           border: OutlineInputBorder(),
                         ),
-                        items: provider.getTemplatePerlakuanPupuk().map((perlakuan) =>
+                        items: activePerlakuan.map((perlakuan) =>
                           DropdownMenuItem(
-                            value: perlakuan,
-                            child: Text(perlakuan),
+                            value: perlakuan.namaPerlakuan,
+                            child: Text(perlakuan.displayName),
                           ),
                         ).toList(),
                         onChanged: (value) {
@@ -950,18 +972,20 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // Simpan referensi ScaffoldMessenger sebelum menutup dialog
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 final success = await context.read<JadwalPemupukanProvider>().generateJadwalBulanan(selectedMonth);
                 Navigator.pop(context);
                 
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Jadwal bulanan berhasil digenerate'),
                       backgroundColor: Colors.green,
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(context.read<JadwalPemupukanProvider>().error ?? 'Gagal generate jadwal'),
                       backgroundColor: Colors.red,
@@ -1038,25 +1062,43 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
 
   void _markAsCompleted(JadwalPemupukanModel jadwal) async {
     final success = await context.read<JadwalPemupukanProvider>().tandaiSelesai(jadwal.idJadwal);
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jadwal ditandai sebagai selesai'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Jadwal ditandai sebagai selesai'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.read<JadwalPemupukanProvider>().error ?? 'Gagal menandai jadwal sebagai selesai'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   void _markAsIncomplete(JadwalPemupukanModel jadwal) async {
     final success = await context.read<JadwalPemupukanProvider>().batalkanSelesai(jadwal.idJadwal);
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Status selesai dibatalkan'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Status selesai dibatalkan'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.read<JadwalPemupukanProvider>().error ?? 'Gagal membatalkan status selesai'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1073,13 +1115,23 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Simpan referensi ScaffoldMessenger sebelum menutup dialog
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
+              
               final success = await context.read<JadwalPemupukanProvider>().hapusJadwalPemupukan(jadwal.idJadwal);
               if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Jadwal berhasil dihapus'),
                     backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(context.read<JadwalPemupukanProvider>().error ?? 'Gagal menghapus jadwal'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }

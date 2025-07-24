@@ -812,7 +812,7 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
                    tingkatPh: double.tryParse(tingkatPhController.text.trim()),
                    suhuAir: double.tryParse(suhuAirController.text.trim()),
                   catatan: catatanController.text.trim().isEmpty ? null : catatanController.text.trim(),
-                  dicatatOleh: authProvider.user?.idPengguna,
+                  dicatatOleh: authProvider.user?.idPengguna ?? '',
                   dicatatPada: monitoring?.dicatatPada ?? DateTime.now(),
                 );
 

@@ -74,15 +74,19 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
       final topProductsData = await _penjualanService.getTopSellingProducts(_startDate!, _endDate!, limit: 10);
       
       setState(() {
-        _penjualanList = penjualanData;
-        _statistik = statistikData;
-        _topProducts = topProductsData;
+        _penjualanList = penjualanData ?? [];
+        _statistik = statistikData ?? {};
+        _topProducts = topProductsData ?? [];
         _isLoading = false;
         _isLoadingStats = false;
       });
     } catch (e) {
+      print('Error loading data: $e');
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = 'Gagal memuat data: ${e.toString()}';
+        _penjualanList = [];
+        _statistik = {};
+        _topProducts = [];
         _isLoading = false;
         _isLoadingStats = false;
       });
@@ -407,11 +411,18 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                         .take(3)
                         .map((entry) => Consumer<PenjualanHarianProvider>(
                               builder: (context, provider, child) {
-                                final pelangganName = provider.getPelangganName(entry.key);
-                                return _buildStatItem(
-                                  pelangganName.isNotEmpty ? pelangganName : 'Pelanggan ${entry.key}',
-                                  _currencyFormat.format(entry.value),
-                                );
+                                try {
+                                  final pelangganName = provider.getPelangganName(entry.key ?? '');
+                                  return _buildStatItem(
+                                    pelangganName.isNotEmpty ? pelangganName : 'Pelanggan ${entry.key ?? 'Unknown'}',
+                                    _currencyFormat.format(entry.value ?? 0),
+                                  );
+                                } catch (e) {
+                                  return _buildStatItem(
+                                    'Pelanggan ${entry.key ?? 'Unknown'}',
+                                    _currencyFormat.format(entry.value ?? 0),
+                                  );
+                                }
                               },
                             )),
                 ],
@@ -468,7 +479,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                         _currencyFormat.format(
                           filteredData.fold<double>(
                             0,
-                            (sum, item) => sum + item.totalHarga,
+                            (sum, item) => sum + (item.totalHarga ?? 0),
                           ),
                         ),
                         style: TextStyle(
@@ -482,7 +493,31 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                 ),
               ),
               // List transaksi
-              ...filteredData.map((penjualan) => _buildTransactionCard(penjualan)),
+              ...filteredData.map((penjualan) {
+                try {
+                  return _buildTransactionCard(penjualan);
+                } catch (e) {
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Error menampilkan transaksi: ${e.toString()}',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+              }).toList(),
             ],
           ),
         ),
@@ -520,212 +555,280 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   }
 
   List<PenjualanHarianModel> _getFilteredData() {
-    List<PenjualanHarianModel> data = _penjualanList;
-    
-    // Filter by jenis sayur
-    if (_selectedJenisSayur != 'Semua') {
-      data = data.where((item) => item.jenisSayur == _selectedJenisSayur).toList();
+    try {
+      List<PenjualanHarianModel> data = _penjualanList;
+      
+      // Filter by jenis sayur
+      if (_selectedJenisSayur != 'Semua') {
+        data = data.where((item) => (item.jenisSayur ?? '') == _selectedJenisSayur).toList();
+      }
+      
+      // Filter by status
+      if (_selectedStatus != 'Semua') {
+        data = data.where((item) => (item.statusKirim ?? 'pending') == _selectedStatus).toList();
+      }
+      
+      return data;
+    } catch (e) {
+      print('Error filtering data: $e');
+      return [];
     }
-    
-    // Filter by status
-    if (_selectedStatus != 'Semua') {
-      data = data.where((item) => item.statusKirim == _selectedStatus).toList();
-    }
-    
-    return data;
   }
 
   Widget _buildTransactionCard(PenjualanHarianModel penjualan) {
-    final statusColor = _getStatusColor(penjualan.statusKirim);
-    
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: statusColor.withOpacity(0.3), width: 1),
-      ),
-      child: InkWell(
-        onTap: () => _showDetailDialog(penjualan),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          penjualan.jenisSayur,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+    try {
+      final statusColor = _getStatusColor(penjualan.statusKirim ?? 'pending');
+      
+      return Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: statusColor.withOpacity(0.3), width: 1),
+        ),
+        child: InkWell(
+          onTap: () => _showDetailDialog(penjualan),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            penjualan.jenisSayur ?? 'Tidak diketahui',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                        Consumer<PenjualanHarianProvider>(
-                          builder: (context, provider, child) {
-                            final pelangganName = provider.getPelangganName(penjualan.idPelanggan);
-                            return Text(
-                              pelangganName.isNotEmpty ? pelangganName : 'Pelanggan ${penjualan.idPelanggan}',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 14,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      _getStatusDisplayName(penjualan.statusKirim),
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                          Consumer<PenjualanHarianProvider>(
+                            builder: (context, provider, child) {
+                              try {
+                                final pelangganName = provider.getPelangganName(penjualan.idPelanggan ?? '');
+                                return Text(
+                                  pelangganName.isNotEmpty ? pelangganName : 'Pelanggan ${penjualan.idPelanggan ?? 'Unknown'}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
+                                );
+                              } catch (e) {
+                                return Text(
+                                  'Pelanggan ${penjualan.idPelanggan ?? 'Unknown'}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        _getStatusDisplayName(penjualan.statusKirim ?? 'pending'),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
               
-              // Details
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Jumlah: ${penjualan.formattedJumlah}',
-                          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                        ),
-                        Text(
-                          'Harga: ${_currencyFormat.format(penjualan.hargaPerSatuan)}/${penjualan.satuan}',
-                          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                        ),
-                      ],
+                // Details
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Jumlah: ${penjualan.formattedJumlah ?? '0'}',
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                          ),
+                          Text(
+                            'Harga: ${_currencyFormat.format(penjualan.hargaPerSatuan ?? 0)}/${penjualan.satuan ?? 'unit'}',
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    _currencyFormat.format(penjualan.totalHarga),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade600,
+                    Text(
+                      _currencyFormat.format(penjualan.totalHarga ?? 0),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade600,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               
-              // Date
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _dateFormat.format(penjualan.tanggalJual),
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 12,
+                // Date
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _dateFormat.format(penjualan.tanggalJual),
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Oleh: ${penjualan.dicatatOleh}',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 12,
+                    Text(
+                      'Oleh: ${penjualan.dicatatOleh ?? 'Unknown'}',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      // Return error card if there's an issue with the transaction data
+      return Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.error, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Error menampilkan data transaksi: ${e.toString()}',
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildProductCard(Map<String, dynamic> product, int rank) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Rank
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _getRankColor(rank),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Center(
-                child: Text(
-                  '$rank',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+    try {
+      return Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Rank
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _getRankColor(rank),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            
-            // Product Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product['jenis_sayur'],
+                child: Center(
+                  child: Text(
+                    '$rank',
                     style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Terjual: ${(product['total_quantity'] as double).toStringAsFixed(1)} unit',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 16),
+              
+              // Product Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product['jenis_sayur']?.toString() ?? 'Tidak diketahui',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'Terjual: ${((product['total_quantity'] ?? 0) as num).toStringAsFixed(1)} unit',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            
-            // Revenue
-            Text(
-              _currencyFormat.format(product['total_revenue']),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.green.shade600,
+              
+              // Revenue
+              Text(
+                _currencyFormat.format(product['total_revenue'] ?? 0),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      return Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.error, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Error menampilkan produk: ${e.toString()}',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Color _getRankColor(int rank) {
@@ -741,7 +844,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     }
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String? status) {
     switch (status) {
       case 'pending':
         return Colors.orange;
@@ -756,7 +859,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     }
   }
 
-  String _getStatusDisplayName(String status) {
+  String _getStatusDisplayName(String? status) {
     switch (status) {
       case 'pending':
         return 'Pending';
@@ -767,7 +870,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
       case 'batal':
         return 'Batal';
       default:
-        return status;
+        return status ?? 'Unknown';
     }
   }
 
@@ -1067,12 +1170,18 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   }
 
   List<String> _getUniqueJenisSayur() {
-    final jenisSayurSet = _penjualanList
-        .map((item) => item.jenisSayur)
-        .toSet()
-        .toList();
-    jenisSayurSet.sort();
-    return jenisSayurSet;
+    try {
+      final jenisSayurSet = _penjualanList
+          .map((item) => item.jenisSayur ?? 'Tidak diketahui')
+          .where((jenis) => jenis.isNotEmpty)
+          .toSet()
+          .toList();
+      jenisSayurSet.sort();
+      return jenisSayurSet;
+    } catch (e) {
+      print('Error getting unique jenis sayur: $e');
+      return [];
+    }
   }
 
   void _showAnalyticsDialog() {
@@ -1142,13 +1251,13 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                   Consumer<PenjualanHarianProvider>(
                     builder: (context, provider, child) {
                       try {
-                        final pelangganName = provider.getPelangganName(penjualan.idPelanggan);
+                        final pelangganName = provider.getPelangganName(penjualan.idPelanggan ?? '');
                         return _buildDetailItem(
                           'Pelanggan',
-                          pelangganName.isNotEmpty ? pelangganName : 'Pelanggan ${penjualan.idPelanggan}',
+                          pelangganName.isNotEmpty ? pelangganName : 'Pelanggan ${penjualan.idPelanggan ?? 'Unknown'}',
                         );
                       } catch (e) {
-                        return _buildDetailItem('Pelanggan', 'Pelanggan ${penjualan.idPelanggan}');
+                        return _buildDetailItem('Pelanggan', 'Pelanggan ${penjualan.idPelanggan ?? 'Unknown'}');
                       }
                     },
                   ),
@@ -1159,7 +1268,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                   if (penjualan.catatan != null && penjualan.catatan!.isNotEmpty)
                     _buildDetailItem('Catatan', penjualan.catatan!),
                   _buildDetailItem('Dicatat Oleh', penjualan.dicatatOleh ?? 'Tidak diketahui'),
-                  _buildDetailItem('Dicatat Pada', DateFormat('dd/MM/yyyy HH:mm').format(penjualan.dicatatPada)),
+                  _buildDetailItem('Dicatat Pada', penjualan.dicatatPada != null ? DateFormat('dd/MM/yyyy HH:mm').format(penjualan.dicatatPada) : 'Tidak diketahui'),
                 ],
               ),
             ),
@@ -1290,7 +1399,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                       children: [
                         pw.Text('Total Penjualan:'),
                         pw.Text(_currencyFormat.format(
-                          filteredData.fold<double>(0, (sum, item) => sum + item.totalHarga),
+                          filteredData.fold<double>(0, (sum, item) => sum + (item.totalHarga ?? 0)),
                         )),
                       ],
                     ),
@@ -1300,7 +1409,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                         pw.Text('Rata-rata per Transaksi:'),
                         pw.Text(_currencyFormat.format(
                           filteredData.isNotEmpty
-                              ? filteredData.fold<double>(0, (sum, item) => sum + item.totalHarga) / filteredData.length
+                              ? filteredData.fold<double>(0, (sum, item) => sum + (item.totalHarga ?? 0)) / filteredData.length
                               : 0,
                         )),
                       ],
@@ -1376,15 +1485,15 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(penjualan.formattedJumlah),
+                        child: pw.Text(penjualan.formattedJumlah ?? '0'),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(_currencyFormat.format(penjualan.hargaPerSatuan)),
+                        child: pw.Text(_currencyFormat.format(penjualan.hargaPerSatuan ?? 0)),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(_currencyFormat.format(penjualan.totalHarga)),
+                        child: pw.Text(_currencyFormat.format(penjualan.totalHarga ?? 0)),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),

@@ -5,6 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../models/pelanggan_model.dart';
 import '../providers/pelanggan_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/jenis_pelanggan_provider.dart';
+import 'jenis_pelanggan_screen.dart';
 
 class PelangganScreen extends StatefulWidget {
   const PelangganScreen({super.key});
@@ -70,24 +72,42 @@ class _PelangganScreenState extends State<PelangganScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedJenis,
-                    decoration: const InputDecoration(
-                      labelText: 'Jenis Pelanggan',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: PelangganModel.jenisPelangganOptions.map((jenis) {
-                      final displayName = PelangganModel.jenisPelangganDisplayOptions[
-                          PelangganModel.jenisPelangganOptions.indexOf(jenis)];
-                      return DropdownMenuItem(
-                        value: jenis,
-                        child: Text(displayName),
+                  Consumer<JenisPelangganProvider>(
+                    builder: (context, jenisPelangganProvider, child) {
+                      final jenisPelangganOptions = jenisPelangganProvider.jenisPelangganOptions;
+                      final jenisPelangganDisplayOptions = jenisPelangganProvider.jenisPelangganDisplayOptions;
+                      
+                      // Ensure selectedJenis is valid
+                      if (!jenisPelangganOptions.contains(selectedJenis) && jenisPelangganOptions.isNotEmpty) {
+                        selectedJenis = jenisPelangganOptions.first;
+                      }
+                      
+                      return DropdownButtonFormField<String>(
+                        value: selectedJenis,
+                        decoration: const InputDecoration(
+                          labelText: 'Jenis Pelanggan',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: jenisPelangganOptions.asMap().entries
+                            .map((entry) => DropdownMenuItem(
+                                  value: entry.value,
+                                  child: Text(jenisPelangganDisplayOptions.length > entry.key 
+                                      ? jenisPelangganDisplayOptions[entry.key]
+                                      : entry.value),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedJenis = value!;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Jenis pelanggan harus dipilih';
+                          }
+                          return null;
+                        },
                       );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedJenis = value!;
-                      });
                     },
                   ),
                   const SizedBox(height: 16),
@@ -235,6 +255,18 @@ class _PelangganScreenState extends State<PelangganScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.category),
+            tooltip: 'Kelola Jenis Pelanggan',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JenisPelangganScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               context.read<PelangganProvider>().loadPelangganAktif();
@@ -300,23 +332,34 @@ class _PelangganScreenState extends State<PelangganScreen> {
                             },
                           ),
                           const SizedBox(width: 8),
-                          ...PelangganModel.jenisPelangganOptions.map((jenis) {
-                            final displayName = PelangganModel.jenisPelangganDisplayOptions[
-                                PelangganModel.jenisPelangganOptions.indexOf(jenis)];
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text(displayName),
-                                selected: _selectedJenis == jenis,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedJenis = selected ? jenis : null;
-                                  });
-                                  _applyFilters();
-                                },
-                              ),
-                            );
-                          }).toList(),
+                          Consumer<JenisPelangganProvider>(
+                            builder: (context, jenisPelangganProvider, child) {
+                              final jenisPelangganOptions = jenisPelangganProvider.jenisPelangganOptions;
+                              final jenisPelangganDisplayOptions = jenisPelangganProvider.jenisPelangganDisplayOptions;
+                              
+                              return Row(
+                                children: jenisPelangganOptions.asMap().entries.map((entry) {
+                                  final jenis = entry.value;
+                                  final displayName = jenisPelangganDisplayOptions.length > entry.key 
+                                      ? jenisPelangganDisplayOptions[entry.key]
+                                      : jenis;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: FilterChip(
+                                      label: Text(displayName),
+                                      selected: _selectedJenis == jenis,
+                                      onSelected: (selected) {
+                                        setState(() {
+                                          _selectedJenis = selected ? jenis : null;
+                                        });
+                                        _applyFilters();
+                                      },
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),

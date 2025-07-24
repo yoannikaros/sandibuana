@@ -239,11 +239,16 @@ class BenihProvider with ChangeNotifier {
 
   // Tambah catatan pembenihan baru
   Future<bool> tambahCatatanPembenihan({
+    required DateTime tanggalPembenihan,
     required DateTime tanggalSemai,
     required String idBenih,
+    String? idTandon,
+    String? idPupuk,
+    String? mediaTanam,
     required int jumlah,
     String? satuan,
-    String? kodeBatch,
+    required String kodeBatch,
+    required String status,
     DateTime? tanggalPanenTarget,
     String? catatan,
     required String dicatatOleh,
@@ -253,11 +258,16 @@ class BenihProvider with ChangeNotifier {
       
       final catatanPembenihan = CatatanPembenihanModel(
         idPembenihan: '', // Will be set by Firestore
+        tanggalPembenihan: tanggalPembenihan,
         tanggalSemai: tanggalSemai,
         idBenih: idBenih,
+        idTandon: idTandon,
+        idPupuk: idPupuk,
+        mediaTanam: mediaTanam,
         jumlah: jumlah,
         satuan: satuan,
         kodeBatch: kodeBatch,
+        status: status,
         tanggalPanenTarget: tanggalPanenTarget,
         catatan: catatan,
         dicatatOleh: dicatatOleh,

@@ -373,54 +373,59 @@ class _PembelianBenihScreenState extends State<PembelianBenihScreen> {
   }
 
   void _showFilterDialog() {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _FilterDialog(),
+      builder: (dialogContext) => _FilterDialog(scaffoldContext: scaffoldContext),
     );
   }
 
   void _showStatisticsDialog() {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _StatisticsDialog(),
+      builder: (dialogContext) => _StatisticsDialog(scaffoldContext: scaffoldContext),
     );
   }
 
   void _showAddEditDialog({PembelianBenihModel? pembelian}) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _AddEditDialog(pembelian: pembelian),
+      builder: (dialogContext) => _AddEditDialog(pembelian: pembelian, scaffoldContext: scaffoldContext),
     );
   }
 
   void _showDetailDialog(PembelianBenihModel pembelian) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _DetailDialog(pembelian: pembelian),
+      builder: (dialogContext) => _DetailDialog(pembelian: pembelian, scaffoldContext: scaffoldContext),
     );
   }
 
   void _showDeleteConfirmation(PembelianBenihModel pembelian) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
         content: Text(
           'Apakah Anda yakin ingin menghapus pembelian benih dari ${pembelian.pemasok}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
-              final provider = Provider.of<PembelianBenihProvider>(context, listen: false);
+              Navigator.pop(dialogContext);
+              final provider = Provider.of<PembelianBenihProvider>(scaffoldContext, listen: false);
               final success = await provider.deletePembelianBenih(pembelian.idPembelian!);
               
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(scaffoldContext).showSnackBar(
                   SnackBar(
                     content: Text(success
                         ? 'Pembelian benih berhasil dihapus'
@@ -441,6 +446,10 @@ class _PembelianBenihScreenState extends State<PembelianBenihScreen> {
 
 // Filter Dialog
 class _FilterDialog extends StatefulWidget {
+  final BuildContext scaffoldContext;
+  
+  const _FilterDialog({required this.scaffoldContext});
+  
   @override
   State<_FilterDialog> createState() => _FilterDialogState();
 }
@@ -609,13 +618,15 @@ class _FilterDialogState extends State<_FilterDialog> {
         ),
         TextButton(
           onPressed: () {
-            final provider = Provider.of<PembelianBenihProvider>(context, listen: false);
-            provider.setSelectedBenih(_selectedBenih);
-            provider.setSelectedPemasok(_selectedPemasok);
-            provider.setDateRange(_startDate, _endDate);
-            provider.setShowExpiredOnly(_showExpiredOnly);
-            provider.setShowExpiringSoonOnly(_showExpiringSoonOnly);
             Navigator.pop(context);
+            if (mounted) {
+              final provider = Provider.of<PembelianBenihProvider>(widget.scaffoldContext, listen: false);
+              provider.setSelectedBenih(_selectedBenih);
+              provider.setSelectedPemasok(_selectedPemasok);
+              provider.setDateRange(_startDate, _endDate);
+              provider.setShowExpiredOnly(_showExpiredOnly);
+              provider.setShowExpiringSoonOnly(_showExpiringSoonOnly);
+            }
           },
           child: const Text('Terapkan'),
         ),
@@ -626,6 +637,10 @@ class _FilterDialogState extends State<_FilterDialog> {
 
 // Statistics Dialog
 class _StatisticsDialog extends StatelessWidget {
+  final BuildContext scaffoldContext;
+  
+  const _StatisticsDialog({required this.scaffoldContext});
+  
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -759,8 +774,9 @@ class _StatisticsDialog extends StatelessWidget {
 // Add/Edit Dialog
 class _AddEditDialog extends StatefulWidget {
   final PembelianBenihModel? pembelian;
+  final BuildContext scaffoldContext;
 
-  const _AddEditDialog({this.pembelian});
+  const _AddEditDialog({this.pembelian, required this.scaffoldContext});
 
   @override
   State<_AddEditDialog> createState() => _AddEditDialogState();
@@ -1080,16 +1096,18 @@ class _AddEditDialogState extends State<_AddEditDialog> {
 
       final validation = pembelian.validate();
       if (validation != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(validation),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+            SnackBar(
+              content: Text(validation),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
-      final provider = Provider.of<PembelianBenihProvider>(context, listen: false);
+      final provider = Provider.of<PembelianBenihProvider>(widget.scaffoldContext, listen: false);
       bool success;
       
       if (widget.pembelian == null) {
@@ -1104,7 +1122,7 @@ class _AddEditDialogState extends State<_AddEditDialog> {
       if (mounted) {
         if (success) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
             SnackBar(
               content: Text(widget.pembelian == null
                   ? 'Pembelian benih berhasil ditambahkan'
@@ -1113,7 +1131,7 @@ class _AddEditDialogState extends State<_AddEditDialog> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
             SnackBar(
               content: Text(provider.error ?? 'Terjadi kesalahan'),
               backgroundColor: Colors.red,
@@ -1123,7 +1141,7 @@ class _AddEditDialogState extends State<_AddEditDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
@@ -1141,8 +1159,9 @@ class _AddEditDialogState extends State<_AddEditDialog> {
 // Detail Dialog
 class _DetailDialog extends StatelessWidget {
   final PembelianBenihModel pembelian;
+  final BuildContext scaffoldContext;
 
-  const _DetailDialog({required this.pembelian});
+  const _DetailDialog({required this.pembelian, required this.scaffoldContext});
 
   @override
   Widget build(BuildContext context) {

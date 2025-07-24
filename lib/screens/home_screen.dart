@@ -16,7 +16,7 @@ import 'kegagalan_panen_screen.dart';
 import 'jadwal_pemupukan_screen.dart';
 import 'catatan_perlakuan_screen.dart';
 import 'pembelian_benih_screen.dart';
-import 'kategori_pengeluaran_screen.dart';
+
 import 'penjualan_harian_screen.dart';
 import 'rekap_benih_mingguan_screen.dart';
 import 'rekap_pupuk_mingguan_screen.dart';
@@ -240,19 +240,7 @@ class HomeScreen extends StatelessWidget {
                                   );
                                 },
                               ),
-                              _buildMenuCard(
-                                context,
-                                'Kategori Pengeluaran',
-                                Icons.category,
-                                Colors.deepPurple,
-                                () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const KategoriPengeluaranScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
+
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -351,19 +339,19 @@ class HomeScreen extends StatelessWidget {
                                   );
                                 },
                               ),
-                              _buildMenuCard(
-                                context,
-                                'Monitoring Nutrisi Harian',
-                                Icons.water_drop,
-                                Colors.cyan,
-                                () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const MonitoringNutrisiHarianScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
+                              // _buildMenuCard(
+                              //   context,
+                              //   'Monitoring Nutrisi Harian',
+                              //   Icons.water_drop,
+                              //   Colors.cyan,
+                              //   () {
+                              //     Navigator.of(context).push(
+                              //       MaterialPageRoute(
+                              //         builder: (context) => const MonitoringNutrisiHarianScreen(),
+                              //       ),
+                              //     );
+                              //   },
+                              // ),
                               _buildMenuCard(
                                 context,
                                 'Penggunaan Pupuk',

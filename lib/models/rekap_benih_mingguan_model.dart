@@ -5,7 +5,7 @@ class RekapBenihMingguanModel {
   final String? idRekap;
   final DateTime tanggalMulai;
   final DateTime tanggalSelesai;
-  final String jenisBenih;
+  final String? idPembenihan; // Reference to catatan_pembenihan
   final int jumlahNampan;
   final String? catatan;
   final String dicatatOleh;
@@ -15,7 +15,7 @@ class RekapBenihMingguanModel {
     this.idRekap,
     required this.tanggalMulai,
     required this.tanggalSelesai,
-    required this.jenisBenih,
+    this.idPembenihan,
     required this.jumlahNampan,
     this.catatan,
     required this.dicatatOleh,
@@ -31,7 +31,7 @@ class RekapBenihMingguanModel {
       idRekap: snapshot.id,
       tanggalMulai: (data?['tanggal_mulai'] as Timestamp).toDate(),
       tanggalSelesai: (data?['tanggal_selesai'] as Timestamp).toDate(),
-      jenisBenih: data?['jenis_benih'],
+      idPembenihan: data?['id_pembenihan'],
       jumlahNampan: data?['jumlah_nampan'] as int,
       catatan: data?['catatan'],
       dicatatOleh: data?['dicatat_oleh'],
@@ -43,7 +43,7 @@ class RekapBenihMingguanModel {
     return {
       "tanggal_mulai": Timestamp.fromDate(tanggalMulai),
       "tanggal_selesai": Timestamp.fromDate(tanggalSelesai),
-      "jenis_benih": jenisBenih,
+      if (idPembenihan != null) "id_pembenihan": idPembenihan,
       "jumlah_nampan": jumlahNampan,
       if (catatan != null) "catatan": catatan,
       "dicatat_oleh": dicatatOleh,
@@ -60,7 +60,7 @@ class RekapBenihMingguanModel {
       idRekap: id,
       tanggalMulai: (data['tanggal_mulai'] as Timestamp).toDate(),
       tanggalSelesai: (data['tanggal_selesai'] as Timestamp).toDate(),
-      jenisBenih: data['jenis_benih'],
+      idPembenihan: data['id_pembenihan'],
       jumlahNampan: data['jumlah_nampan'] as int,
       catatan: data['catatan'],
       dicatatOleh: data['dicatat_oleh'],
@@ -73,7 +73,7 @@ class RekapBenihMingguanModel {
     String? idRekap,
     DateTime? tanggalMulai,
     DateTime? tanggalSelesai,
-    String? jenisBenih,
+    String? idPembenihan,
     int? jumlahNampan,
     String? catatan,
     String? dicatatOleh,
@@ -83,7 +83,7 @@ class RekapBenihMingguanModel {
       idRekap: idRekap ?? this.idRekap,
       tanggalMulai: tanggalMulai ?? this.tanggalMulai,
       tanggalSelesai: tanggalSelesai ?? this.tanggalSelesai,
-      jenisBenih: jenisBenih ?? this.jenisBenih,
+      idPembenihan: idPembenihan ?? this.idPembenihan,
       jumlahNampan: jumlahNampan ?? this.jumlahNampan,
       catatan: catatan ?? this.catatan,
       dicatatOleh: dicatatOleh ?? this.dicatatOleh,
@@ -99,27 +99,13 @@ class RekapBenihMingguanModel {
     if (tanggalSelesai.isBefore(tanggalMulai)) {
       return 'Tanggal selesai tidak boleh sebelum tanggal mulai';
     }
-    if (jenisBenih.trim().isEmpty) {
-      return 'Jenis benih harus diisi';
+    if (idPembenihan == null || idPembenihan!.trim().isEmpty) {
+      return 'Catatan pembenihan harus dipilih';
     }
     if (jumlahNampan <= 0) {
       return 'Jumlah nampan harus lebih dari 0';
     }
     return null;
-  }
-
-  // Static methods for template data
-  static List<String> getJenisBenihOptions() {
-    return [
-      'Selada',
-      'Romaine',
-      'Kangkung',
-      'Bayam',
-      'Pakcoy',
-      'Sawi',
-      'Kemangi',
-      'Lettuce',
-    ];
   }
 
   // Helper methods for UI
@@ -131,32 +117,9 @@ class RekapBenihMingguanModel {
     return '$jumlahNampan nampan';
   }
 
-  Color getJenisBenihColor() {
-    switch (jenisBenih.toLowerCase()) {
-      case 'selada':
-        return Colors.green;
-      case 'romaine':
-        return Colors.lightGreen;
-      case 'kangkung':
-        return Colors.teal;
-      case 'bayam':
-        return Colors.green.shade700;
-      case 'pakcoy':
-        return Colors.lime;
-      case 'sawi':
-        return Colors.yellow.shade700;
-      case 'kemangi':
-        return Colors.purple;
-      case 'lettuce':
-        return Colors.green.shade300;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   String toString() {
-    return 'RekapBenihMingguanModel(idRekap: $idRekap, jenisBenih: $jenisBenih, jumlahNampan: $jumlahNampan, periode: $formattedPeriode)';
+    return 'RekapBenihMingguanModel(idRekap: $idRekap, idPembenihan: $idPembenihan, jumlahNampan: $jumlahNampan, periode: $formattedPeriode)';
   }
 
   @override
@@ -164,14 +127,14 @@ class RekapBenihMingguanModel {
     if (identical(this, other)) return true;
     return other is RekapBenihMingguanModel &&
         other.idRekap == idRekap &&
-        other.jenisBenih == jenisBenih &&
+        other.idPembenihan == idPembenihan &&
         other.jumlahNampan == jumlahNampan;
   }
 
   @override
   int get hashCode {
     return idRekap.hashCode ^
-        jenisBenih.hashCode ^
+        idPembenihan.hashCode ^
         jumlahNampan.hashCode;
   }
 }

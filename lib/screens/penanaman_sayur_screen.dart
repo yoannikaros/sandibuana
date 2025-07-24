@@ -33,9 +33,12 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     final provider = Provider.of<PenanamanSayurProvider>(context, listen: false);
     await provider.initialize();
-    _applyFilters();
+    if (mounted) {
+      _applyFilters();
+    }
   }
 
   void _applyFilters() {
@@ -485,6 +488,8 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
     switch (tahap) {
       case 'semai':
         return Colors.blue;
+      case 'berjalan':
+        return Colors.teal;
       case 'vegetatif':
         return Colors.green;
       case 'siap_panen':
@@ -518,17 +523,27 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
   }
 
   void _showAddPenanamanDialog() {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _AddPenanamanDialog(),
-    ).then((_) => _loadData());
+      builder: (dialogContext) => _AddPenanamanDialog(scaffoldContext: scaffoldContext),
+    ).then((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   void _showEditDialog(PenanamanSayurModel penanaman) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _EditPenanamanDialog(penanaman: penanaman),
-    ).then((_) => _loadData());
+      builder: (dialogContext) => _EditPenanamanDialog(penanaman: penanaman, scaffoldContext: scaffoldContext),
+    ).then((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   void _showDetailDialog(PenanamanSayurModel penanaman) {
@@ -539,44 +554,63 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
   }
 
   void _showUpdateTahapDialog(PenanamanSayurModel penanaman) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _UpdateTahapDialog(penanaman: penanaman),
-    ).then((_) => _loadData());
+      builder: (dialogContext) => _UpdateTahapDialog(penanaman: penanaman, scaffoldContext: scaffoldContext),
+    ).then((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   void _showPanenDialog(PenanamanSayurModel penanaman) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _PanenDialog(penanaman: penanaman),
-    ).then((_) => _loadData());
+      builder: (dialogContext) => _PanenDialog(penanaman: penanaman, scaffoldContext: scaffoldContext),
+    ).then((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   void _showDeleteConfirmation(PenanamanSayurModel penanaman) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
         content: Text('Apakah Anda yakin ingin menghapus data penanaman ${penanaman.jenisSayur}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
-              final provider = Provider.of<PenanamanSayurProvider>(context, listen: false);
+              Navigator.of(dialogContext).pop();
+              
+              if (!mounted) return;
+              
+              final provider = Provider.of<PenanamanSayurProvider>(scaffoldContext, listen: false);
               final success = await provider.hapusPenanamanSayur(penanaman.idPenanaman);
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Data berhasil dihapus')),
-                );
-                _loadData();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Gagal menghapus data: ${provider.errorMessage}')),
-                );
+              
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                    const SnackBar(content: Text('Data berhasil dihapus')),
+                  );
+                  if (mounted) {
+                    _loadData();
+                  }
+                } else {
+                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                    SnackBar(content: Text('Gagal menghapus data: ${provider.errorMessage}')),
+                  );
+                }
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -590,6 +624,10 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
 
 // Add Penanaman Dialog
 class _AddPenanamanDialog extends StatefulWidget {
+  final BuildContext scaffoldContext;
+  
+  const _AddPenanamanDialog({required this.scaffoldContext});
+  
   @override
   _AddPenanamanDialogState createState() => _AddPenanamanDialogState();
 }
@@ -766,15 +804,17 @@ class _AddPenanamanDialogState extends State<_AddPenanamanDialog> {
                         dicatatOleh: authProvider.user?.idPengguna ?? '',
                       );
 
-                      if (success) {
+                      if (mounted) {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data berhasil ditambahkan')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal menambahkan data: ${provider.errorMessage}')),
-                        );
+                        if (success) {
+                          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                            const SnackBar(content: Text('Data berhasil ditambahkan')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                            SnackBar(content: Text('Gagal menambahkan data: ${provider.errorMessage}')),
+                          );
+                        }
                       }
                     }
                   },
@@ -795,8 +835,9 @@ class _AddPenanamanDialogState extends State<_AddPenanamanDialog> {
 // Edit Penanaman Dialog
 class _EditPenanamanDialog extends StatefulWidget {
   final PenanamanSayurModel penanaman;
+  final BuildContext scaffoldContext;
 
-  const _EditPenanamanDialog({required this.penanaman});
+  const _EditPenanamanDialog({required this.penanaman, required this.scaffoldContext});
 
   @override
   _EditPenanamanDialogState createState() => _EditPenanamanDialogState();
@@ -989,15 +1030,17 @@ class _EditPenanamanDialogState extends State<_EditPenanamanDialog> {
                         updateData,
                       );
 
-                      if (success) {
+                      if (mounted) {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data berhasil diupdate')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal mengupdate data: ${provider.errorMessage}')),
-                        );
+                        if (success) {
+                          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                            const SnackBar(content: Text('Data berhasil diupdate')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                            SnackBar(content: Text('Gagal mengupdate data: ${provider.errorMessage}')),
+                          );
+                        }
                       }
                     }
                   },
@@ -1102,8 +1145,9 @@ class _DetailPenanamanDialog extends StatelessWidget {
 // Update Tahap Dialog
 class _UpdateTahapDialog extends StatefulWidget {
   final PenanamanSayurModel penanaman;
+  final BuildContext scaffoldContext;
 
-  const _UpdateTahapDialog({required this.penanaman});
+  const _UpdateTahapDialog({required this.penanaman, required this.scaffoldContext});
 
   @override
   _UpdateTahapDialogState createState() => _UpdateTahapDialogState();
@@ -1111,7 +1155,7 @@ class _UpdateTahapDialog extends StatefulWidget {
 
 class _UpdateTahapDialogState extends State<_UpdateTahapDialog> {
   late String _selectedTahap;
-  final List<String> _tahapOptions = ['semai', 'vegetatif', 'siap_panen', 'gagal'];
+  final List<String> _tahapOptions = ['semai', 'berjalan', 'vegetatif', 'siap_panen', 'gagal'];
 
   @override
   void initState() {
@@ -1165,15 +1209,17 @@ class _UpdateTahapDialogState extends State<_UpdateTahapDialog> {
                       _selectedTahap,
                     );
 
-                    if (success) {
+                    if (mounted) {
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tahap berhasil diupdate')),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal mengupdate tahap: ${provider.errorMessage}')),
-                      );
+                      if (success) {
+                        ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                          const SnackBar(content: Text('Tahap berhasil diupdate')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                          SnackBar(content: Text('Gagal mengupdate tahap: ${provider.errorMessage}')),
+                        );
+                      }
                     }
                   },
             child: provider.isLoading
@@ -1193,8 +1239,9 @@ class _UpdateTahapDialogState extends State<_UpdateTahapDialog> {
 // Panen Dialog
 class _PanenDialog extends StatefulWidget {
   final PenanamanSayurModel penanaman;
+  final BuildContext scaffoldContext;
 
-  const _PanenDialog({required this.penanaman});
+  const _PanenDialog({required this.penanaman, required this.scaffoldContext});
 
   @override
   _PanenDialogState createState() => _PanenDialogState();
@@ -1318,15 +1365,17 @@ class _PanenDialogState extends State<_PanenDialog> {
                         alasanGagal: _alasanGagalController.text.isNotEmpty ? _alasanGagalController.text : null,
                       );
 
-                      if (success) {
+                      if (mounted) {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data panen berhasil disimpan')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal menyimpan data panen: ${provider.errorMessage}')),
-                        );
+                        if (success) {
+                          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                            const SnackBar(content: Text('Data panen berhasil disimpan')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                            SnackBar(content: Text('Gagal menyimpan data panen: ${provider.errorMessage}')),
+                          );
+                        }
                       }
                     }
                   },

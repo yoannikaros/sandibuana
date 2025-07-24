@@ -543,6 +543,8 @@ class _KategoriPengeluaranScreenState extends State<KategoriPengeluaranScreen> {
       success = await provider.addKategori(kategori);
     }
 
+    if (!mounted) return;
+
     if (success) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -622,6 +624,8 @@ class _KategoriPengeluaranScreenState extends State<KategoriPengeluaranScreen> {
     final provider = Provider.of<KategoriPengeluaranProvider>(context, listen: false);
     final success = await provider.activateKategori(id);
     
+    if (!mounted) return;
+    
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -642,6 +646,8 @@ class _KategoriPengeluaranScreenState extends State<KategoriPengeluaranScreen> {
   Future<void> _deactivateKategori(String id) async {
     final provider = Provider.of<KategoriPengeluaranProvider>(context, listen: false);
     final success = await provider.deactivateKategori(id);
+    
+    if (!mounted) return;
     
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -690,6 +696,8 @@ class _KategoriPengeluaranScreenState extends State<KategoriPengeluaranScreen> {
   Future<void> _deleteKategori(String id) async {
     final provider = Provider.of<KategoriPengeluaranProvider>(context, listen: false);
     final success = await provider.deleteKategori(id);
+    
+    if (!mounted) return;
     
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -766,6 +774,9 @@ class _KategoriPengeluaranScreenState extends State<KategoriPengeluaranScreen> {
             onPressed: () async {
               Navigator.pop(context);
               await provider.initializeDefaultKategori();
+              
+              if (!mounted) return;
+              
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Kategori default berhasil ditambahkan'),

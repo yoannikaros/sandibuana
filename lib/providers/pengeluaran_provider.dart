@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/pengeluaran_harian_model.dart';
-import '../models/kategori_pengeluaran_model.dart';
 import '../services/pengeluaran_service.dart';
 
 class PengeluaranProvider with ChangeNotifier {
@@ -8,10 +7,8 @@ class PengeluaranProvider with ChangeNotifier {
   
   // State variables
   List<PengeluaranHarianModel> _pengeluaranList = [];
-  List<KategoriPengeluaranModel> _kategoriList = [];
   List<PengeluaranHarianModel> _filteredPengeluaranList = [];
   bool _isLoading = false;
-  bool _isLoadingKategori = false;
   String? _error;
   String _searchQuery = '';
   String? _selectedKategoriId;
@@ -20,9 +17,8 @@ class PengeluaranProvider with ChangeNotifier {
 
   // Getters
   List<PengeluaranHarianModel> get pengeluaranList => _filteredPengeluaranList;
-  List<KategoriPengeluaranModel> get kategoriList => _kategoriList;
+  List<String> get kategoriList => _pengeluaranService.getAllKategori();
   bool get isLoading => _isLoading;
-  bool get isLoadingKategori => _isLoadingKategori;
   String? get error => _error;
   String get searchQuery => _searchQuery;
   String? get selectedKategoriId => _selectedKategoriId;
@@ -31,84 +27,10 @@ class PengeluaranProvider with ChangeNotifier {
 
   // Initialize data
   Future<void> initialize() async {
-    await loadKategori();
     await loadPengeluaran();
   }
 
-  // ========================================
-  // KATEGORI METHODS
-  // ========================================
 
-  // Load all categories
-  Future<void> loadKategori() async {
-    _isLoadingKategori = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      await _pengeluaranService.initializeDefaultKategori();
-      _kategoriList = await _pengeluaranService.getAllKategori();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoadingKategori = false;
-      notifyListeners();
-    }
-  }
-
-  // Add new category
-  Future<bool> tambahKategori(KategoriPengeluaranModel kategori) async {
-    try {
-      await _pengeluaranService.tambahKategori(kategori);
-      await loadKategori();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Update category
-  Future<bool> updateKategori(KategoriPengeluaranModel kategori) async {
-    try {
-      await _pengeluaranService.updateKategori(kategori);
-      await loadKategori();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Delete category
-  Future<bool> hapusKategori(String id) async {
-    try {
-      await _pengeluaranService.hapusKategori(id);
-      await loadKategori();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Get category by ID
-  KategoriPengeluaranModel? getKategoriById(String id) {
-    try {
-      return _kategoriList.firstWhere((kategori) => kategori.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Get category name by ID
-  String getKategoriName(String id) {
-    final kategori = getKategoriById(id);
-    return kategori?.namaKategori ?? 'Kategori tidak ditemukan';
-  }
 
   // ========================================
   // PENGELUARAN METHODS
@@ -149,13 +71,13 @@ class PengeluaranProvider with ChangeNotifier {
   }
 
   // Load expenses by category
-  Future<void> loadPengeluaranByKategori(String idKategori) async {
+  Future<void> loadPengeluaranByKategori(String kategori) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _pengeluaranList = await _pengeluaranService.getPengeluaranByKategori(idKategori);
+      _pengeluaranList = await _pengeluaranService.getPengeluaranByKategori(kategori);
       _applyFilters();
     } catch (e) {
       _error = e.toString();
@@ -181,7 +103,7 @@ class PengeluaranProvider with ChangeNotifier {
   // Update expense
   Future<bool> updatePengeluaran(PengeluaranHarianModel pengeluaran) async {
     try {
-      await _pengeluaranService.updatePengeluaran(pengeluaran);
+      await _pengeluaranService.updatePengeluaran(pengeluaran.id, pengeluaran);
       await loadPengeluaran();
       return true;
     } catch (e) {
@@ -254,7 +176,7 @@ class PengeluaranProvider with ChangeNotifier {
       }
 
       // Category filter
-      if (_selectedKategoriId != null && pengeluaran.idKategori != _selectedKategoriId) {
+      if (_selectedKategoriId != null && pengeluaran.kategori != _selectedKategoriId) {
         return false;
       }
 
@@ -280,9 +202,9 @@ class PengeluaranProvider with ChangeNotifier {
   }
 
   // Get total expenses by category
-  double getTotalByKategori(String kategoriId) {
+  double getTotalByKategori(String kategori) {
     return _filteredPengeluaranList
-        .where((pengeluaran) => pengeluaran.idKategori == kategoriId)
+        .where((pengeluaran) => pengeluaran.kategori == kategori)
         .fold(0.0, (sum, item) => sum + item.jumlah);
   }
 
@@ -306,26 +228,14 @@ class PengeluaranProvider with ChangeNotifier {
     final Map<String, double> categoryData = {};
     
     for (final pengeluaran in _filteredPengeluaranList) {
-      final kategoriName = getKategoriName(pengeluaran.idKategori);
+      final kategoriName = pengeluaran.kategori;
       categoryData[kategoriName] = (categoryData[kategoriName] ?? 0) + pengeluaran.jumlah;
     }
     
     return categoryData;
   }
 
-  // ========================================
-  // STREAM METHODS
-  // ========================================
 
-  // Stream expenses for real-time updates
-  Stream<List<PengeluaranHarianModel>> streamPengeluaran() {
-    return _pengeluaranService.streamPengeluaran();
-  }
-
-  // Stream categories for real-time updates
-  Stream<List<KategoriPengeluaranModel>> streamKategori() {
-    return _pengeluaranService.streamKategori();
-  }
 
   // Clear error
   void clearError() {

@@ -6,8 +6,8 @@ class CatatanPerlakuanModel {
   final DateTime tanggalPerlakuan;
   final String? idJadwal; // relasi ke jadwal jika ada
   final String jenisPerlakuan;
-  final String? areaTanaman;
-  final String? bahanDigunakan;
+  final String? idPenanaman; // relasi ke penanaman sayur
+  final String? idPembenihan; // relasi ke catatan pembenihan
   final double? jumlahDigunakan;
   final String? satuan;
   final String? metode;
@@ -15,6 +15,7 @@ class CatatanPerlakuanModel {
   final int? ratingEfektivitas; // 1-5 rating efektivitas
   final String? catatan;
   final String dicatatOleh;
+  final String namaUser; // nama user yang login
   final DateTime dicatatPada;
 
   CatatanPerlakuanModel({
@@ -22,8 +23,8 @@ class CatatanPerlakuanModel {
     required this.tanggalPerlakuan,
     this.idJadwal,
     required this.jenisPerlakuan,
-    this.areaTanaman,
-    this.bahanDigunakan,
+    this.idPenanaman,
+    this.idPembenihan,
     this.jumlahDigunakan,
     this.satuan,
     this.metode,
@@ -31,6 +32,7 @@ class CatatanPerlakuanModel {
     this.ratingEfektivitas,
     this.catatan,
     required this.dicatatOleh,
+    required this.namaUser,
     required this.dicatatPada,
   });
 
@@ -42,8 +44,8 @@ class CatatanPerlakuanModel {
       tanggalPerlakuan: (data['tanggal_perlakuan'] as Timestamp).toDate(),
       idJadwal: data['id_jadwal'],
       jenisPerlakuan: data['jenis_perlakuan'] ?? '',
-      areaTanaman: data['area_tanaman'],
-      bahanDigunakan: data['bahan_digunakan'],
+      idPenanaman: data['id_penanaman'],
+      idPembenihan: data['id_pembenihan'],
       jumlahDigunakan: data['jumlah_digunakan']?.toDouble(),
       satuan: data['satuan'],
       metode: data['metode'],
@@ -51,6 +53,7 @@ class CatatanPerlakuanModel {
       ratingEfektivitas: data['rating_efektivitas'],
       catatan: data['catatan'],
       dicatatOleh: data['dicatat_oleh'] ?? '',
+      namaUser: data['nama_user'] ?? '',
       dicatatPada: (data['dicatat_pada'] as Timestamp).toDate(),
     );
   }
@@ -61,8 +64,8 @@ class CatatanPerlakuanModel {
       'tanggal_perlakuan': Timestamp.fromDate(tanggalPerlakuan),
       'id_jadwal': idJadwal,
       'jenis_perlakuan': jenisPerlakuan,
-      'area_tanaman': areaTanaman,
-      'bahan_digunakan': bahanDigunakan,
+      'id_penanaman': idPenanaman,
+      'id_pembenihan': idPembenihan,
       'jumlah_digunakan': jumlahDigunakan,
       'satuan': satuan,
       'metode': metode,
@@ -70,6 +73,7 @@ class CatatanPerlakuanModel {
       'rating_efektivitas': ratingEfektivitas,
       'catatan': catatan,
       'dicatat_oleh': dicatatOleh,
+      'nama_user': namaUser,
       'dicatat_pada': Timestamp.fromDate(dicatatPada),
     };
   }
@@ -80,8 +84,8 @@ class CatatanPerlakuanModel {
     DateTime? tanggalPerlakuan,
     String? idJadwal,
     String? jenisPerlakuan,
-    String? areaTanaman,
-    String? bahanDigunakan,
+    String? idPenanaman,
+    String? idPembenihan,
     double? jumlahDigunakan,
     String? satuan,
     String? metode,
@@ -89,6 +93,7 @@ class CatatanPerlakuanModel {
     int? ratingEfektivitas,
     String? catatan,
     String? dicatatOleh,
+    String? namaUser,
     DateTime? dicatatPada,
   }) {
     return CatatanPerlakuanModel(
@@ -96,8 +101,8 @@ class CatatanPerlakuanModel {
       tanggalPerlakuan: tanggalPerlakuan ?? this.tanggalPerlakuan,
       idJadwal: idJadwal ?? this.idJadwal,
       jenisPerlakuan: jenisPerlakuan ?? this.jenisPerlakuan,
-      areaTanaman: areaTanaman ?? this.areaTanaman,
-      bahanDigunakan: bahanDigunakan ?? this.bahanDigunakan,
+      idPenanaman: idPenanaman ?? this.idPenanaman,
+      idPembenihan: idPembenihan ?? this.idPembenihan,
       jumlahDigunakan: jumlahDigunakan ?? this.jumlahDigunakan,
       satuan: satuan ?? this.satuan,
       metode: metode ?? this.metode,
@@ -105,6 +110,7 @@ class CatatanPerlakuanModel {
       ratingEfektivitas: ratingEfektivitas ?? this.ratingEfektivitas,
       catatan: catatan ?? this.catatan,
       dicatatOleh: dicatatOleh ?? this.dicatatOleh,
+      namaUser: namaUser ?? this.namaUser,
       dicatatPada: dicatatPada ?? this.dicatatPada,
     );
   }
@@ -140,12 +146,30 @@ class CatatanPerlakuanModel {
     return '${jumlahDigunakan!.toStringAsFixed(jumlahDigunakan! % 1 == 0 ? 0 : 2)} ${satuan ?? ''}'.trim();
   }
 
-  String get displayAreaTanaman {
-    return areaTanaman?.isNotEmpty == true ? areaTanaman! : 'Tidak Ditentukan';
+  String get displayRelasi {
+    if (idPenanaman != null) return 'Penanaman: $idPenanaman';
+    if (idPembenihan != null) return 'Pembenihan: $idPembenihan';
+    return 'Tidak ada relasi';
   }
-
-  String get displayBahanDigunakan {
-    return bahanDigunakan?.isNotEmpty == true ? bahanDigunakan! : 'Tidak Ditentukan';
+  
+  // Method untuk mendapatkan display relasi dengan detail penanaman sayur
+  String getDisplayRelasiWithDetail(List<dynamic>? penanamanSayurList) {
+    if (idPenanaman != null && penanamanSayurList != null) {
+      try {
+        final penanaman = penanamanSayurList.firstWhere(
+          (p) => p.idPenanaman == idPenanaman,
+          orElse: () => null,
+        );
+        if (penanaman != null) {
+          return 'Penanaman: ${penanaman.jenisSayur} (${penanaman.displayTahapPertumbuhan})';
+        }
+      } catch (e) {
+        // Fallback jika terjadi error
+      }
+      return 'Penanaman: $idPenanaman';
+    }
+    if (idPembenihan != null) return 'Pembenihan: $idPembenihan';
+    return 'Tidak ada relasi';
   }
 
   String get displayMetode {
@@ -160,7 +184,9 @@ class CatatanPerlakuanModel {
     return catatan?.isNotEmpty == true ? catatan! : 'Tidak ada catatan';
   }
 
-  // Static methods untuk template data
+  // Static methods untuk template data - DEPRECATED
+  // Use DropdownService instead for dynamic data from SQLite
+  @deprecated
   static List<String> getJenisPerlakuanOptions() {
     return [
       'Pemupukan',
@@ -176,21 +202,9 @@ class CatatanPerlakuanModel {
     ];
   }
 
-  static List<String> getAreaTanamanOptions() {
-    return [
-      'Greenhouse A',
-      'Greenhouse B',
-      'Greenhouse C',
-      'Lahan Terbuka 1',
-      'Lahan Terbuka 2',
-      'Lahan Terbuka 3',
-      'Nursery',
-      'Kebun Sayur',
-      'Kebun Buah',
-      'Area Kompos',
-    ];
-  }
+  // Removed getAreaTanamanOptions - no longer needed
 
+  @deprecated
   static List<String> getMetodeOptions() {
     return [
       'Manual',
@@ -298,8 +312,9 @@ class CatatanPerlakuanModel {
 
   String getDisplaySubtitle() {
     final parts = <String>[];
-    if (areaTanaman?.isNotEmpty == true) parts.add('Area: $areaTanaman');
-    if (bahanDigunakan?.isNotEmpty == true) parts.add('Bahan: $bahanDigunakan');
+    if (idPenanaman != null) parts.add('Penanaman');
+    if (idPembenihan != null) parts.add('Pembenihan');
+    parts.add('Oleh: $namaUser');
     if (ratingEfektivitas != null) parts.add('Rating: ${getRatingText(ratingEfektivitas)}');
     return parts.join(' • ');
   }

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../models/jenis_pupuk_model.dart';
 import '../models/penggunaan_pupuk_model.dart';
 import '../services/pupuk_service.dart';
+import 'tipe_pupuk_provider.dart';
 
 class PupukProvider with ChangeNotifier {
   final PupukService _pupukService = PupukService();
+  TipePupukProvider? _tipePupukProvider;
   
   List<JenisPupukModel> _jenisPupukList = [];
   List<PenggunaanPupukModel> _penggunaanPupukList = [];
@@ -276,8 +278,20 @@ class PupukProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  // Get pupuk types for dropdown
-  List<String> get tipePupukList => ['makro', 'mikro', 'organik', 'kimia'];
+  // Set tipe pupuk provider
+  void setTipePupukProvider(TipePupukProvider tipePupukProvider) {
+    _tipePupukProvider = tipePupukProvider;
+  }
+  
+  // Get pupuk types for dropdown from SQLite
+  List<String> get tipePupukList {
+    return _tipePupukProvider?.tipePupukOptions ?? ['makro', 'mikro', 'organik', 'kimia'];
+  }
+  
+  // Get pupuk types display names for dropdown
+  List<String> get tipePupukDisplayList {
+    return _tipePupukProvider?.tipePupukDisplayOptions ?? ['Makro', 'Mikro', 'Organik', 'Kimia'];
+  }
   
   // Get satuan options for penggunaan pupuk
   List<String> get satuanPupukList => ['kg', 'liter', 'gram', 'ml'];

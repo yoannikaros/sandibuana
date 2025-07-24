@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class PengeluaranHarianModel {
   final String id;
   final DateTime tanggalPengeluaran;
-  final String idKategori;
+  final String kategori;
   final String keterangan;
   final double jumlah;
   final String? nomorNota;
@@ -15,7 +15,7 @@ class PengeluaranHarianModel {
   PengeluaranHarianModel({
     required this.id,
     required this.tanggalPengeluaran,
-    required this.idKategori,
+    required this.kategori,
     required this.keterangan,
     required this.jumlah,
     this.nomorNota,
@@ -31,7 +31,7 @@ class PengeluaranHarianModel {
     return PengeluaranHarianModel(
       id: doc.id,
       tanggalPengeluaran: (data['tanggal_pengeluaran'] as Timestamp).toDate(),
-      idKategori: data['id_kategori'] ?? '',
+      kategori: data['kategori'] ?? '',
       keterangan: data['keterangan'] ?? '',
       jumlah: (data['jumlah'] ?? 0).toDouble(),
       nomorNota: data['nomor_nota'],
@@ -49,7 +49,7 @@ class PengeluaranHarianModel {
       tanggalPengeluaran: map['tanggal_pengeluaran'] is Timestamp
           ? (map['tanggal_pengeluaran'] as Timestamp).toDate()
           : DateTime.parse(map['tanggal_pengeluaran']),
-      idKategori: map['id_kategori'] ?? '',
+      kategori: map['kategori'] ?? '',
       keterangan: map['keterangan'] ?? '',
       jumlah: (map['jumlah'] ?? 0).toDouble(),
       nomorNota: map['nomor_nota'],
@@ -66,7 +66,7 @@ class PengeluaranHarianModel {
   Map<String, dynamic> toFirestore() {
     return {
       'tanggal_pengeluaran': Timestamp.fromDate(tanggalPengeluaran),
-      'id_kategori': idKategori,
+      'kategori': kategori,
       'keterangan': keterangan,
       'jumlah': jumlah,
       'nomor_nota': nomorNota,
@@ -82,7 +82,7 @@ class PengeluaranHarianModel {
     return {
       'id': id,
       'tanggal_pengeluaran': tanggalPengeluaran.toIso8601String(),
-      'id_kategori': idKategori,
+      'kategori': kategori,
       'keterangan': keterangan,
       'jumlah': jumlah,
       'nomor_nota': nomorNota,
@@ -97,7 +97,7 @@ class PengeluaranHarianModel {
   PengeluaranHarianModel copyWith({
     String? id,
     DateTime? tanggalPengeluaran,
-    String? idKategori,
+    String? kategori,
     String? keterangan,
     double? jumlah,
     String? nomorNota,
@@ -109,7 +109,7 @@ class PengeluaranHarianModel {
     return PengeluaranHarianModel(
       id: id ?? this.id,
       tanggalPengeluaran: tanggalPengeluaran ?? this.tanggalPengeluaran,
-      idKategori: idKategori ?? this.idKategori,
+      kategori: kategori ?? this.kategori,
       keterangan: keterangan ?? this.keterangan,
       jumlah: jumlah ?? this.jumlah,
       nomorNota: nomorNota ?? this.nomorNota,
@@ -122,7 +122,7 @@ class PengeluaranHarianModel {
 
   @override
   String toString() {
-    return 'PengeluaranHarianModel(id: $id, tanggalPengeluaran: $tanggalPengeluaran, idKategori: $idKategori, keterangan: $keterangan, jumlah: $jumlah, nomorNota: $nomorNota, pemasok: $pemasok, catatan: $catatan, dicatatOleh: $dicatatOleh, dicatatPada: $dicatatPada)';
+    return 'PengeluaranHarianModel(id: $id, tanggalPengeluaran: $tanggalPengeluaran, kategori: $kategori, keterangan: $keterangan, jumlah: $jumlah, nomorNota: $nomorNota, pemasok: $pemasok, catatan: $catatan, dicatatOleh: $dicatatOleh, dicatatPada: $dicatatPada)';
   }
 
   @override
@@ -131,7 +131,7 @@ class PengeluaranHarianModel {
     return other is PengeluaranHarianModel &&
         other.id == id &&
         other.tanggalPengeluaran == tanggalPengeluaran &&
-        other.idKategori == idKategori &&
+        other.kategori == kategori &&
         other.keterangan == keterangan &&
         other.jumlah == jumlah &&
         other.nomorNota == nomorNota &&
@@ -145,7 +145,7 @@ class PengeluaranHarianModel {
   int get hashCode {
     return id.hashCode ^
         tanggalPengeluaran.hashCode ^
-        idKategori.hashCode ^
+        kategori.hashCode ^
         keterangan.hashCode ^
         jumlah.hashCode ^
         nomorNota.hashCode ^

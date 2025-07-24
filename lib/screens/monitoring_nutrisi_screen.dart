@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/monitoring_nutrisi_model.dart';
-import '../providers/tandon_provider.dart';
+import '../providers/monitoring_nutrisi_provider.dart';
+import '../providers/auth_provider.dart';
 
 class MonitoringNutrisiScreen extends StatefulWidget {
   const MonitoringNutrisiScreen({super.key});
@@ -15,7 +16,9 @@ class MonitoringNutrisiScreen extends StatefulWidget {
 class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
   final TextEditingController _searchController = TextEditingController();
   DateTime? _selectedDate;
-  String? _selectedTandonId;
+  String? _selectedPembenihanId;
+  String? _selectedPenanamanId;
+  String _selectedFilterType = 'pembenihan'; // 'pembenihan' or 'penanaman'
 
   @override
   void initState() {
@@ -23,9 +26,8 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
     // Initialize Indonesian locale for DateFormat
     initializeDateFormatting('id_ID', null);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<TandonProvider>();
-      provider.loadTandonAir();
-      provider.loadMonitoringNutrisi();
+      final provider = context.read<MonitoringNutrisiProvider>();
+      provider.initialize();
     });
   }
 
@@ -51,7 +53,7 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              context.read<TandonProvider>().loadMonitoringNutrisi();
+              context.read<MonitoringNutrisiProvider>().refresh();
             },
           ),
         ],
@@ -83,7 +85,7 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                           icon: const Icon(Icons.clear),
                           onPressed: () {
                             _searchController.clear();
-                            context.read<TandonProvider>().searchMonitoringNutrisi('');
+                            context.read<MonitoringNutrisiProvider>().search('');
                           },
                         )
                       : null,
@@ -95,13 +97,13 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                   ),
                 ),
                 onChanged: (value) {
-                  context.read<TandonProvider>().searchMonitoringNutrisi(value);
+                  context.read<MonitoringNutrisiProvider>().search(value);
                 },
               ),
             ),
             
             // Filter Chips
-            if (_selectedDate != null || _selectedTandonId != null)
+            if (_selectedDate != null || _selectedPembenihanId != null || _selectedPenanamanId != null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(
@@ -126,24 +128,48 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                           _applyFilters();
                         },
                       ),
-                    if (_selectedTandonId != null)
-                      Consumer<TandonProvider>(
+                    if (_selectedPembenihanId != null)
+                      Consumer<MonitoringNutrisiProvider>(
                         builder: (context, provider, child) {
-                          final tandonName = provider.getTandonName(_selectedTandonId!);
+                          final pembenihanName = provider.getPembenihanName(_selectedPembenihanId!);
                           return FilterChip(
-                            label: Text(tandonName),
+                            label: Text('Pembenihan: $pembenihanName'),
                             selected: true,
                             onSelected: (bool selected) {
                               if (!selected) {
                                 setState(() {
-                                  _selectedTandonId = null;
+                                  _selectedPembenihanId = null;
                                 });
                                 _applyFilters();
                               }
                             },
                             onDeleted: () {
                               setState(() {
-                                _selectedTandonId = null;
+                                _selectedPembenihanId = null;
+                              });
+                              _applyFilters();
+                            },
+                          );
+                        },
+                      ),
+                    if (_selectedPenanamanId != null)
+                      Consumer<MonitoringNutrisiProvider>(
+                        builder: (context, provider, child) {
+                          final penanamanName = provider.getPenanamanName(_selectedPenanamanId!);
+                          return FilterChip(
+                            label: Text('Penanaman: $penanamanName'),
+                            selected: true,
+                            onSelected: (bool selected) {
+                              if (!selected) {
+                                setState(() {
+                                  _selectedPenanamanId = null;
+                                });
+                                _applyFilters();
+                              }
+                            },
+                            onDeleted: () {
+                              setState(() {
+                                _selectedPenanamanId = null;
                               });
                               _applyFilters();
                             },
@@ -166,15 +192,15 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                     topRight: Radius.circular(24),
                   ),
                 ),
-                child: Consumer<TandonProvider>(
-                  builder: (context, tandonProvider, child) {
-                    if (tandonProvider.isLoadingMonitoringNutrisi) {
+                child: Consumer<MonitoringNutrisiProvider>(
+                  builder: (context, monitoringProvider, child) {
+                    if (monitoringProvider.isLoading) {
                       return const Center(
                         child: CircularProgressIndicator(),
                       );
                     }
 
-                    if (tandonProvider.monitoringNutrisiError != null) {
+                    if (monitoringProvider.error != null) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -191,14 +217,14 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              tandonProvider.monitoringNutrisiError!,
+                              monitoringProvider.error!,
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () {
-                                tandonProvider.loadMonitoringNutrisi();
+                                monitoringProvider.refresh();
                               },
                               child: const Text('Coba Lagi'),
                             ),
@@ -207,7 +233,7 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                       );
                     }
 
-                    final monitoringList = tandonProvider.monitoringNutrisiList;
+                    final monitoringList = monitoringProvider.filteredMonitoringList;
 
                     if (monitoringList.isEmpty) {
                       return Center(
@@ -298,23 +324,38 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          Consumer<TandonProvider>(
+                          Consumer<MonitoringNutrisiProvider>(
                             builder: (context, provider, child) {
-                              final tandonName = provider.getTandonName(monitoring.idTandon);
+                              String relationName = '';
+                              Color bgColor = Colors.blue[100]!;
+                              Color textColor = Colors.blue[700]!;
+                              
+                              if (monitoring.idPembenihan != null) {
+                                relationName = 'P: ${provider.getPembenihanName(monitoring.idPembenihan!)}';
+                                bgColor = Colors.green[100]!;
+                                textColor = Colors.green[700]!;
+                              } else if (monitoring.idPenanaman != null) {
+                                relationName = 'T: ${provider.getPenanamanName(monitoring.idPenanaman!)}';
+                                bgColor = Colors.orange[100]!;
+                                textColor = Colors.orange[700]!;
+                              }
+                              
+                              if (relationName.isEmpty) return const SizedBox.shrink();
+                              
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue[100],
+                                  color: bgColor,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  tandonName,
+                                  relationName,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.blue[700],
+                                    color: textColor,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -534,32 +575,89 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                   }
                 },
               ),
-              Consumer<TandonProvider>(
+              const SizedBox(height: 16),
+              
+              // Filter Type Selection
+              DropdownButtonFormField<String>(
+                value: _selectedFilterType,
+                decoration: const InputDecoration(
+                  labelText: 'Tipe Filter',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'pembenihan',
+                    child: Text('Berdasarkan Pembenihan'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'penanaman',
+                    child: Text('Berdasarkan Penanaman'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedFilterType = value!;
+                    _selectedPembenihanId = null;
+                    _selectedPenanamanId = null;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Dynamic Filter based on type
+              Consumer<MonitoringNutrisiProvider>(
                 builder: (context, provider, child) {
-                  return DropdownButtonFormField<String>(
-                    value: _selectedTandonId,
-                    decoration: const InputDecoration(
-                      labelText: 'Tandon Air',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('Semua tandon'),
+                  if (_selectedFilterType == 'pembenihan') {
+                    return DropdownButtonFormField<String>(
+                      value: _selectedPembenihanId,
+                      decoration: const InputDecoration(
+                        labelText: 'Catatan Pembenihan',
+                        border: OutlineInputBorder(),
                       ),
-                      ...provider.tandonAirList.map(
-                        (tandon) => DropdownMenuItem<String>(
-                          value: tandon.id,
-                          child: Text('${tandon.kodeTandon} - ${tandon.namaTandon ?? ''}'),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Semua pembenihan'),
                         ),
+                        ...provider.pembenihanList.map(
+                          (pembenihan) => DropdownMenuItem<String>(
+                            value: pembenihan.idPembenihan,
+                            child: Text('${pembenihan.kodeBatch} - ${pembenihan.idBenih}'),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedPembenihanId = value;
+                        });
+                      },
+                    );
+                  } else {
+                    return DropdownButtonFormField<String>(
+                      value: _selectedPenanamanId,
+                      decoration: const InputDecoration(
+                        labelText: 'Penanaman Sayur',
+                        border: OutlineInputBorder(),
                       ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedTandonId = value;
-                      });
-                    },
-                  );
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Semua penanaman'),
+                        ),
+                        ...provider.penanamanList.map(
+                          (penanaman) => DropdownMenuItem<String>(
+                            value: penanaman.idPenanaman,
+                            child: Text('${penanaman.jenisSayur} - ${DateFormat('dd/MM/yyyy').format(penanaman.tanggalTanam)}'),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedPenanamanId = value;
+                        });
+                      },
+                    );
+                  }
                 },
               ),
             ],
@@ -569,7 +667,8 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
               onPressed: () {
                 setState(() {
                   _selectedDate = null;
-                  _selectedTandonId = null;
+                  _selectedPembenihanId = null;
+                  _selectedPenanamanId = null;
                 });
               },
               child: const Text('Reset'),
@@ -592,10 +691,21 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
   }
 
   void _applyFilters() {
-    context.read<TandonProvider>().filterMonitoringNutrisi(
-          tanggal: _selectedDate,
-          idTandon: _selectedTandonId,
-        );
+    final provider = context.read<MonitoringNutrisiProvider>();
+    
+    if (_selectedDate != null) {
+      provider.filterByDate(_selectedDate!);
+    }
+    
+    if (_selectedPembenihanId != null) {
+      provider.filterByPembenihan(_selectedPembenihanId!);
+    } else if (_selectedPenanamanId != null) {
+      provider.filterByPenanaman(_selectedPenanamanId!);
+    }
+    
+    if (_selectedDate == null && _selectedPembenihanId == null && _selectedPenanamanId == null) {
+      provider.clearFilters();
+    }
   }
 
   void _showAddEditDialog({MonitoringNutrisiModel? monitoring}) {
@@ -603,7 +713,9 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
     final formKey = GlobalKey<FormState>();
     
     DateTime selectedDate = monitoring?.tanggalMonitoring ?? DateTime.now();
-    String? selectedTandonId = monitoring?.idTandon;
+    String? selectedPembenihanId = monitoring?.idPembenihan;
+    String? selectedPenanamanId = monitoring?.idPenanaman;
+    String selectedRelationType = monitoring?.idPembenihan != null ? 'pembenihan' : 'penanaman';
     final nilaiPpmController = TextEditingController(
         text: monitoring?.nilaiPpm?.toString() ?? '');
     final airDitambahController = TextEditingController(
@@ -616,8 +728,6 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
         text: monitoring?.suhuAir?.toString() ?? '');
     final catatanController = TextEditingController(
         text: monitoring?.catatan ?? '');
-    final dicatatOlehController = TextEditingController(
-        text: monitoring?.dicatatOleh ?? '');
 
     showDialog(
       context: context,
@@ -651,33 +761,87 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Tandon Air
-                  Consumer<TandonProvider>(
+                  // Relation Type Selection
+                  DropdownButtonFormField<String>(
+                    value: selectedRelationType,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipe Relasi *',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'pembenihan',
+                        child: Text('Catatan Pembenihan'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'penanaman',
+                        child: Text('Penanaman Sayur'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedRelationType = value!;
+                        selectedPembenihanId = null;
+                        selectedPenanamanId = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Dynamic Relation Selection
+                  Consumer<MonitoringNutrisiProvider>(
                     builder: (context, provider, child) {
-                      return DropdownButtonFormField<String>(
-                        value: selectedTandonId,
-                        decoration: const InputDecoration(
-                          labelText: 'Tandon Air *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Tandon air harus dipilih';
-                          }
-                          return null;
-                        },
-                        items: provider.tandonAirList.map(
-                          (tandon) => DropdownMenuItem<String>(
-                            value: tandon.id,
-                            child: Text('${tandon.kodeTandon} - ${tandon.namaTandon ?? ''}'),
+                      if (selectedRelationType == 'pembenihan') {
+                        return DropdownButtonFormField<String>(
+                          value: selectedPembenihanId,
+                          decoration: const InputDecoration(
+                            labelText: 'Catatan Pembenihan *',
+                            border: OutlineInputBorder(),
                           ),
-                        ).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedTandonId = value;
-                          });
-                        },
-                      );
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Catatan pembenihan harus dipilih';
+                            }
+                            return null;
+                          },
+                          items: provider.pembenihanList.map(
+                            (pembenihan) => DropdownMenuItem<String>(
+                              value: pembenihan.idPembenihan,
+                              child: Text('${pembenihan.kodeBatch} - ${pembenihan.idBenih}'),
+                            ),
+                          ).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedPembenihanId = value;
+                            });
+                          },
+                        );
+                      } else {
+                        return DropdownButtonFormField<String>(
+                          value: selectedPenanamanId,
+                          decoration: const InputDecoration(
+                            labelText: 'Penanaman Sayur *',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Penanaman sayur harus dipilih';
+                            }
+                            return null;
+                          },
+                          items: provider.penanamanList.map(
+                            (penanaman) => DropdownMenuItem<String>(
+                              value: penanaman.idPenanaman,
+                              child: Text('${penanaman.jenisSayur} - ${DateFormat('dd/MM/yyyy').format(penanaman.tanggalTanam)}'),
+                            ),
+                          ).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedPenanamanId = value;
+                            });
+                          },
+                        );
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
@@ -746,16 +910,6 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                     ),
                     maxLines: 3,
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Dicatat Oleh
-                  TextFormField(
-                    controller: dicatatOlehController,
-                    decoration: const InputDecoration(
-                      labelText: 'Dicatat Oleh',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -768,10 +922,31 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
+                  // Validate that either pembenihan or penanaman is selected
+                  if (selectedRelationType == 'pembenihan' && selectedPembenihanId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Catatan pembenihan harus dipilih'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                  if (selectedRelationType == 'penanaman' && selectedPenanamanId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Penanaman sayur harus dipilih'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                  
                   final newMonitoring = MonitoringNutrisiModel(
                     id: monitoring?.id ?? '',
                     tanggalMonitoring: selectedDate,
-                    idTandon: selectedTandonId!,
+                    idPembenihan: selectedRelationType == 'pembenihan' ? selectedPembenihanId : null,
+                    idPenanaman: selectedRelationType == 'penanaman' ? selectedPenanamanId : null,
                     nilaiPpm: nilaiPpmController.text.trim().isEmpty
                         ? null
                         : double.tryParse(nilaiPpmController.text.trim()),
@@ -790,21 +965,19 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                     catatan: catatanController.text.trim().isEmpty
                         ? null
                         : catatanController.text.trim(),
-                    dicatatOleh: dicatatOlehController.text.trim().isEmpty
-                        ? null
-                        : dicatatOlehController.text.trim(),
-                    dicatatPada: DateTime.now(),
+                    dicatatOleh: monitoring?.dicatatOleh ?? '', // Will be auto-filled by provider
+                    dicatatPada: monitoring?.dicatatPada ?? DateTime.now(),
                   );
 
                   bool success;
                   if (isEdit) {
                     success = await context
-                        .read<TandonProvider>()
-                        .updateMonitoringNutrisi(newMonitoring);
+                        .read<MonitoringNutrisiProvider>()
+                        .updateMonitoring(newMonitoring);
                   } else {
                     success = await context
-                        .read<TandonProvider>()
-                        .tambahMonitoringNutrisi(newMonitoring);
+                        .read<MonitoringNutrisiProvider>()
+                        .tambahMonitoring(newMonitoring);
                   }
 
                   if (success && context.mounted) {
@@ -823,7 +996,7 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          context.read<TandonProvider>().monitoringNutrisiError ??
+                          context.read<MonitoringNutrisiProvider>().error ??
                               'Terjadi kesalahan',
                         ),
                         backgroundColor: Colors.red,
@@ -856,8 +1029,8 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
           ElevatedButton(
             onPressed: () async {
               final success = await context
-                  .read<TandonProvider>()
-                  .hapusMonitoringNutrisi(monitoring.id);
+                  .read<MonitoringNutrisiProvider>()
+                  .deleteMonitoring(monitoring.id!);
 
               if (success && context.mounted) {
                 Navigator.of(context).pop();
@@ -872,7 +1045,7 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      context.read<TandonProvider>().monitoringNutrisiError ??
+                      context.read<MonitoringNutrisiProvider>().error ??
                           'Gagal menghapus monitoring nutrisi',
                     ),
                     backgroundColor: Colors.red,

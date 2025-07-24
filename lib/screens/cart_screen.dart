@@ -267,105 +267,113 @@ class _CartScreenState extends State<CartScreen> {
   void _showCheckoutDialog(CartProvider cartProvider) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Checkout Pesanan'),
-        content: Consumer<PelangganProvider>(
-          builder: (context, pelangganProvider, child) {
-            return SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Pilih Pelanggan:',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: selectedPelangganId,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Pilih pelanggan',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Checkout Pesanan'),
+          content: Consumer<PelangganProvider>(
+            builder: (context, pelangganProvider, child) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pilih Pelanggan:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    items: [
-                      // Add 'Umum' option at the top
-                      const DropdownMenuItem(
-                        value: 'umum',
-                        child: Text('Umum'),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedPelangganId,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Pilih pelanggan',
                       ),
-                      // Add existing customers
-                      ...pelangganProvider.pelangganList.map((pelanggan) {
-                        return DropdownMenuItem(
-                          value: pelanggan.id,
-                          child: Text(pelanggan.namaPelanggan),
-                        );
-                      }).toList(),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedPelangganId = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Status Kirim:',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: selectedStatusKirim,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                      items: [
+                        // Add 'Umum' option at the top
+                        const DropdownMenuItem(
+                          value: 'umum',
+                          child: Text('Umum'),
+                        ),
+                        // Add existing customers
+                        ...pelangganProvider.pelangganList.map((pelanggan) {
+                          return DropdownMenuItem(
+                            value: pelanggan.id,
+                            child: Text(pelanggan.namaPelanggan),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedPelangganId = value;
+                        });
+                        setState(() {
+                          selectedPelangganId = value;
+                        });
+                      },
                     ),
-                    items: [
-                      DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                      DropdownMenuItem(value: 'terkirim', child: Text('Terkirim')),
-                      DropdownMenuItem(value: 'batal', child: Text('Batal')),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedStatusKirim = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Catatan (Opsional):',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: catatanController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Tambahkan catatan...',
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Status Kirim:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedStatusKirim,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                        DropdownMenuItem(value: 'terkirim', child: Text('Terkirim')),
+                        DropdownMenuItem(value: 'batal', child: Text('Batal')),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedStatusKirim = value!;
+                        });
+                        setState(() {
+                          selectedStatusKirim = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Catatan (Opsional):',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: catatanController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Tambahkan catatan...',
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-          ElevatedButton(
-            onPressed: selectedPelangganId != null
-                ? () => _processCheckout(cartProvider)
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: selectedPelangganId != null
-                  ? Colors.green.shade600
-                  : Colors.grey,
-              foregroundColor: Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
             ),
-            child: const Text('Proses Pesanan'),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: selectedPelangganId != null
+                  ? () => _processCheckout(cartProvider)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedPelangganId != null
+                    ? Colors.green.shade600
+                    : Colors.grey,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Proses Pesanan'),
+            ),
+          ],
+        ),
       ),
     );
   }

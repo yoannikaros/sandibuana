@@ -38,6 +38,7 @@ class _PenjualanHarianScreenState extends State<PenjualanHarianScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PenjualanHarianProvider>().initialize();
       context.read<PenanamanSayurProvider>().loadAvailableJenisSayur();
+      context.read<PenanamanSayurProvider>().loadAllPenanamanSayur();
       context.read<CartProvider>().loadCartItems();
     });
   }
@@ -185,74 +186,89 @@ class _PenjualanHarianScreenState extends State<PenjualanHarianScreen> {
   }
 
   Widget _buildProductCard(String jenisSayur) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _showAddToCartDialog(jenisSayur),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Icon(
-                  Icons.eco,
-                  color: Colors.green.shade600,
-                  size: 30,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                jenisSayur,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Harga: Sesuai Pasar',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade600,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '+ Keranjang',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+    return Consumer<PenanamanSayurProvider>(
+      builder: (context, penanamanProvider, child) {
+        final latestPrice = penanamanProvider.getLatestPriceByJenisSayur(jenisSayur);
+        
+        return Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      ),
+          child: InkWell(
+            onTap: () => _showAddToCartDialog(jenisSayur),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Icon(
+                      Icons.eco,
+                      color: Colors.green.shade600,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    jenisSayur,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    latestPrice != null 
+                        ? 'Rp ${latestPrice.toStringAsFixed(0)}/kg'
+                        : 'Harga: Belum tersedia',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: latestPrice != null 
+                          ? Colors.green.shade700
+                          : Colors.grey.shade600,
+                      fontWeight: latestPrice != null 
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                      fontStyle: latestPrice != null 
+                          ? FontStyle.normal
+                          : FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade600,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      '+ Keranjang',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

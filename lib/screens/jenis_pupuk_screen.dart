@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/jenis_pupuk_model.dart';
 import '../providers/pupuk_provider.dart';
+import '../providers/tipe_pupuk_provider.dart';
+import 'tipe_pupuk_screen.dart';
 
 class JenisPupukScreen extends StatefulWidget {
   const JenisPupukScreen({super.key});
@@ -43,6 +45,20 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
         backgroundColor: Colors.green[600],
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.category),
+            tooltip: 'Kelola Tipe Pupuk',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TipePupukScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -395,22 +411,42 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedTipe,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipe Pupuk *',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: context.read<PupukProvider>().tipePupukList
-                        .map((tipe) => DropdownMenuItem(
-                              value: tipe,
-                              child: Text(tipe.toUpperCase()),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedTipe = value!;
-                      });
+                  Consumer<TipePupukProvider>(
+                    builder: (context, tipePupukProvider, child) {
+                      final tipePupukOptions = tipePupukProvider.tipePupukOptions;
+                      final tipePupukDisplayOptions = tipePupukProvider.tipePupukDisplayOptions;
+                      
+                      // Ensure selectedTipe is valid
+                      if (!tipePupukOptions.contains(selectedTipe) && tipePupukOptions.isNotEmpty) {
+                        selectedTipe = tipePupukOptions.first;
+                      }
+                      
+                      return DropdownButtonFormField<String>(
+                        value: selectedTipe,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipe Pupuk *',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: tipePupukOptions.asMap().entries
+                            .map((entry) => DropdownMenuItem(
+                                  value: entry.value,
+                                  child: Text(tipePupukDisplayOptions.length > entry.key 
+                                      ? tipePupukDisplayOptions[entry.key]
+                                      : entry.value.toUpperCase()),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedTipe = value!;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Tipe pupuk harus dipilih';
+                          }
+                          return null;
+                        },
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -461,19 +497,18 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                     aktif: isAktif,
                   );
 
+                  final provider = context.read<PupukProvider>();
                   bool success;
                   if (isEdit) {
-                    success = await context
-                        .read<PupukProvider>()
-                        .updateJenisPupuk(pupuk!.id, pupukData);
+                    success = await provider.updateJenisPupuk(pupuk!.id, pupukData);
                   } else {
-                    success = await context
-                        .read<PupukProvider>()
-                        .tambahJenisPupuk(pupukData);
+                    success = await provider.tambahJenisPupuk(pupukData);
                   }
 
-                  if (success && mounted) {
-                    Navigator.pop(context);
+                  if (!mounted) return;
+
+                  Navigator.pop(context);
+                  if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -482,6 +517,13 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                               : 'Pupuk berhasil ditambahkan',
                         ),
                         backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(provider.error ?? 'Terjadi kesalahan'),
+                        backgroundColor: Colors.red,
                       ),
                     );
                   }
@@ -515,16 +557,24 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final success = await context
-                  .read<PupukProvider>()
-                  .hapusJenisPupuk(pupuk.id);
+              final provider = context.read<PupukProvider>();
+              final success = await provider.hapusJenisPupuk(pupuk.id);
               
-              if (success && mounted) {
-                Navigator.pop(context);
+              if (!mounted) return;
+              
+              Navigator.pop(context);
+              if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Pupuk berhasil dihapus'),
                     backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(provider.error ?? 'Gagal menghapus pupuk'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }

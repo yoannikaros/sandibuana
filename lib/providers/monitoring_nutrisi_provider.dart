@@ -1,16 +1,26 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/monitoring_nutrisi_model.dart';
+import '../models/catatan_pembenihan_model.dart';
+import '../models/penanaman_sayur_model.dart';
 import '../models/tandon_air_model.dart';
 import '../services/monitoring_nutrisi_service.dart';
+import '../services/auth_service.dart';
+import '../services/benih_service.dart';
+import '../services/penanaman_sayur_service.dart';
 import '../services/tandon_service.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'auth_provider.dart';
 
 class MonitoringNutrisiProvider with ChangeNotifier {
   final MonitoringNutrisiService _monitoringService = MonitoringNutrisiService();
-  final TandonService _tandonService = TandonService();
+  final AuthService _authService = AuthService();
 
   // State variables
   List<MonitoringNutrisiModel> _monitoringList = [];
   List<MonitoringNutrisiModel> _filteredMonitoringList = [];
+  List<CatatanPembenihanModel> _pembenihanList = [];
+  List<PenanamanSayurModel> _penanamanList = [];
   List<TandonAirModel> _tandonList = [];
   bool _isLoading = false;
   String? _error;
@@ -18,12 +28,17 @@ class MonitoringNutrisiProvider with ChangeNotifier {
 
   // Filter variables
   String _searchQuery = '';
+  String? _selectedPembenihanId;
+  String? _selectedPenanamanId;
   String? _selectedTandonId;
   DateTime? _startDate;
   DateTime? _endDate;
 
   // Getters
   List<MonitoringNutrisiModel> get monitoringList => _filteredMonitoringList;
+  List<MonitoringNutrisiModel> get filteredMonitoringList => _filteredMonitoringList;
+  List<CatatanPembenihanModel> get pembenihanList => _pembenihanList;
+  List<PenanamanSayurModel> get penanamanList => _penanamanList;
   List<TandonAirModel> get tandonList => _tandonList;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -58,6 +73,8 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     try {
       await Future.wait([
         loadMonitoring(),
+        loadPembenihanList(),
+        loadPenanamanList(),
         loadTandonList(),
       ]);
       _isInitialized = true;
@@ -78,13 +95,42 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     }
   }
 
+  // Load pembenihan list
+  Future<void> loadPembenihanList() async {
+    try {
+      _setLoading(true);
+      final benihService = BenihService();
+      _pembenihanList = await benihService.getAllCatatanPembenihan();
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Load penanaman list
+  Future<void> loadPenanamanList() async {
+    try {
+      _setLoading(true);
+      final penanamanService = PenanamanSayurService();
+      _penanamanList = await penanamanService.getAllPenanamanSayur();
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Load tandon list
   Future<void> loadTandonList() async {
     try {
-      _tandonList = await _tandonService.getAllTandonAir();
-      notifyListeners();
+      _setLoading(true);
+      final tandonService = TandonService();
+      _tandonList = await tandonService.getAllTandon();
     } catch (e) {
-      _setError('Gagal memuat data tandon: $e');
+      _setError(e.toString());
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -92,8 +138,8 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   Future<bool> tambahMonitoring(MonitoringNutrisiModel monitoring) async {
     _setLoading(true);
     try {
-      final id = await _monitoringService.addMonitoring(monitoring);
-      if (id.isNotEmpty) {
+      final success = await _monitoringService.addMonitoring(monitoring);
+      if (success) {
         await loadMonitoring();
         _setLoading(false);
         return true;
@@ -154,10 +200,38 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     _applyFilters();
   }
 
+  // Search method (alias for searchMonitoring)
+  void search(String query) {
+    searchMonitoring(query);
+  }
+
+  // Filter by pembenihan
+  void filterByPembenihan(String? pembenihanId) {
+    _selectedPembenihanId = pembenihanId;
+    _selectedPenanamanId = null; // Clear penanaman filter
+    _applyFilters();
+  }
+
+  // Filter by penanaman
+  void filterByPenanaman(String? penanamanId) {
+    _selectedPenanamanId = penanamanId;
+    _selectedPembenihanId = null; // Clear pembenihan filter
+    _applyFilters();
+  }
+
   // Filter by tandon
   void filterByTandon(String? tandonId) {
     _selectedTandonId = tandonId;
     _applyFilters();
+    notifyListeners();
+  }
+
+  // Filter by date range
+  void filterByDate(DateTime? date) {
+    _startDate = date;
+    _endDate = date;
+    _applyFilters();
+    notifyListeners();
   }
 
   // Filter by date range
@@ -165,6 +239,31 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     _startDate = startDate;
     _endDate = endDate;
     _applyFilters();
+    notifyListeners();
+  }
+
+  // Delete monitoring
+  Future<bool> deleteMonitoring(String id) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final success = await _monitoringService.deleteMonitoring(id);
+      
+      if (success) {
+         _monitoringList.removeWhere((monitoring) => monitoring.id == id);
+         _applyFilters();
+       }
+      
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+       _error = e.toString();
+       _isLoading = false;
+       notifyListeners();
+       return false;
+     }
   }
 
   // Clear date filter
@@ -177,6 +276,8 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   // Clear all filters
   void clearFilters() {
     _searchQuery = '';
+    _selectedPembenihanId = null;
+    _selectedPenanamanId = null;
     _selectedTandonId = null;
     _startDate = null;
     _endDate = null;
@@ -190,12 +291,18 @@ class MonitoringNutrisiProvider with ChangeNotifier {
       if (_searchQuery.isNotEmpty) {
         final searchLower = _searchQuery.toLowerCase();
         final matchesSearch = (monitoring.catatan?.toLowerCase().contains(searchLower) ?? false) ||
-                            getTandonName(monitoring.idTandon).toLowerCase().contains(searchLower);
+                            getPembenihanName(monitoring.idPembenihan).toLowerCase().contains(searchLower) ||
+                            getPenanamanName(monitoring.idPenanaman).toLowerCase().contains(searchLower);
         if (!matchesSearch) return false;
       }
 
-      // Tandon filter
-      if (_selectedTandonId != null && monitoring.idTandon != _selectedTandonId) {
+      // Pembenihan filter
+      if (_selectedPembenihanId != null && monitoring.idPembenihan != _selectedPembenihanId) {
+        return false;
+      }
+
+      // Penanaman filter
+      if (_selectedPenanamanId != null && monitoring.idPenanaman != _selectedPenanamanId) {
         return false;
       }
 
@@ -233,12 +340,22 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     }
   }
 
-  // Get monitoring by tandon
-  Future<List<MonitoringNutrisiModel>> getMonitoringByTandon(String tandonId) async {
+  // Get monitoring by pembenihan
+  Future<List<MonitoringNutrisiModel>> getMonitoringByPembenihan(String pembenihanId) async {
     try {
-      return await _monitoringService.getMonitoringByTandon(tandonId);
+      return await _monitoringService.getMonitoringByPembenihan(pembenihanId);
     } catch (e) {
-      _setError('Gagal memuat monitoring berdasarkan tandon: $e');
+      _setError('Gagal memuat monitoring berdasarkan pembenihan: $e');
+      return [];
+    }
+  }
+
+  // Get monitoring by penanaman
+  Future<List<MonitoringNutrisiModel>> getMonitoringByPenanaman(String penanamanId) async {
+    try {
+      return await _monitoringService.getMonitoringByPenanaman(penanamanId);
+    } catch (e) {
+      _setError('Gagal memuat monitoring berdasarkan penanaman: $e');
       return [];
     }
   }
@@ -300,21 +417,66 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     };
   }
 
+  // Get pembenihan name by ID
+  String getPembenihanName(String? pembenihanId) {
+    if (pembenihanId == null) return '';
+    try {
+      final pembenihan = _pembenihanList.firstWhere(
+        (p) => p.idPembenihan == pembenihanId,
+        orElse: () => CatatanPembenihanModel(
+          idPembenihan: '',
+          tanggalPembenihan: DateTime.now(),
+          tanggalSemai: DateTime.now(),
+          idBenih: '',
+          jumlah: 0,
+          kodeBatch: 'Tidak Ditemukan',
+          status: '',
+          dicatatOleh: '',
+          dicatatPada: DateTime.now(),
+        ),
+      );
+      return pembenihan.kodeBatch;
+    } catch (e) {
+      return 'Pembenihan Tidak Diketahui';
+    }
+  }
+
+  // Get penanaman name by ID
+  String getPenanamanName(String? penanamanId) {
+    if (penanamanId == null) return '';
+    try {
+      final penanaman = _penanamanList.firstWhere(
+        (p) => p.idPenanaman == penanamanId,
+        orElse: () => PenanamanSayurModel(
+          idPenanaman: '',
+          tanggalTanam: DateTime.now(),
+          jenisSayur: 'Tidak Ditemukan',
+          jumlahDitanam: 0,
+          dicatatOleh: '',
+          dicatatPada: DateTime.now(),
+          diubahPada: DateTime.now(),
+        ),
+      );
+      return penanaman.jenisSayur;
+    } catch (e) {
+      return 'Penanaman Tidak Diketahui';
+    }
+  }
+
   // Get tandon name by ID
-  String getTandonName(String tandonId) {
+  String getTandonName(String? tandonId) {
+    if (tandonId == null) return '';
     try {
       final tandon = _tandonList.firstWhere(
         (t) => t.id == tandonId,
         orElse: () => TandonAirModel(
           id: '',
-          kodeTandon: '',
-          namaTandon: 'Tandon Tidak Ditemukan',
+          kodeTandon: 'TDN000',
+          namaTandon: 'Tidak Ditemukan',
           kapasitas: 0,
-          lokasi: '',
-          aktif: false,
         ),
       );
-      return tandon.namaTandon ?? 'Tandon Tidak Ditemukan';
+      return tandon.namaTandon ?? 'Tandon ${tandon.kodeTandon}';
     } catch (e) {
       return 'Tandon Tidak Diketahui';
     }
@@ -335,6 +497,8 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     try {
       await Future.wait([
         loadMonitoring(),
+        loadPembenihanList(),
+        loadPenanamanList(),
         loadTandonList(),
       ]);
     } catch (e) {
@@ -383,8 +547,12 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   void clearData() {
     _monitoringList.clear();
     _filteredMonitoringList.clear();
+    _pembenihanList.clear();
+    _penanamanList.clear();
     _tandonList.clear();
     _searchQuery = '';
+    _selectedPembenihanId = null;
+    _selectedPenanamanId = null;
     _selectedTandonId = null;
     _startDate = null;
     _endDate = null;

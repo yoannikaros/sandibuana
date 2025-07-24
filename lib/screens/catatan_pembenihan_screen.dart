@@ -4,8 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/catatan_pembenihan_model.dart';
 import '../models/jenis_benih_model.dart';
+import '../models/tandon_air_model.dart';
+import '../models/jenis_pupuk_model.dart';
 import '../providers/benih_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tandon_provider.dart';
+import '../providers/pupuk_provider.dart';
 
 class CatatanPembenihanScreen extends StatefulWidget {
   const CatatanPembenihanScreen({super.key});
@@ -31,9 +35,18 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
+    
     final benihProvider = Provider.of<BenihProvider>(context, listen: false);
-    await benihProvider.loadJenisBenihAktif();
-    await benihProvider.loadCatatanPembenihanByTanggal(_selectedStartDate, _selectedEndDate);
+    final tandonProvider = Provider.of<TandonProvider>(context, listen: false);
+    final pupukProvider = Provider.of<PupukProvider>(context, listen: false);
+    
+    await Future.wait([
+      benihProvider.loadJenisBenihAktif(),
+      tandonProvider.loadTandonAir(),
+      pupukProvider.loadJenisPupukAktif(),
+      benihProvider.loadCatatanPembenihanByTanggal(_selectedStartDate, _selectedEndDate),
+    ]);
   }
 
   @override
@@ -270,6 +283,42 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
         dibuatPada: DateTime.now(),
       ),
     );
+    
+    // Get tandon and pupuk providers for display
+    final tandonProvider = Provider.of<TandonProvider>(context, listen: false);
+    final pupukProvider = Provider.of<PupukProvider>(context, listen: false);
+    
+    // Get tandon name
+    final tandon = catatan.idTandon != null 
+        ? tandonProvider.tandonAirList.firstWhere(
+            (t) => t.id == catatan.idTandon,
+            orElse: () => TandonAirModel(id: '', kodeTandon: 'Unknown'),
+          )
+        : null;
+    
+    // Get pupuk name
+    final pupuk = catatan.idPupuk != null
+        ? pupukProvider.jenisPupukAktif.firstWhere(
+            (p) => p.id == catatan.idPupuk,
+            orElse: () => JenisPupukModel(id: '', namaPupuk: 'Unknown', tipe: ''),
+          )
+        : null;
+    
+    // Status color
+    Color statusColor;
+    switch (catatan.status) {
+      case 'berjalan':
+        statusColor = Colors.blue;
+        break;
+      case 'panen':
+        statusColor = Colors.green;
+        break;
+      case 'gagal':
+        statusColor = Colors.red;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -291,12 +340,52 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          benih.namaBenih,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                benih.namaBenih,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: statusColor),
+                              ),
+                              child: Text(
+                                catatan.status.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.grass,
+                              size: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Pembenihan: ${DateFormat('dd/MM/yyyy').format(catatan.tanggalPembenihan)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -308,7 +397,7 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai),
+                              'Semai: ${DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -369,12 +458,40 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        if (catatan.kodeBatch != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Batch: ${catatan.kodeBatch}',
+                          style: TextStyle(
+                            color: Colors.blue[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (tandon != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            'Batch: ${catatan.kodeBatch}',
+                            'Tandon: ${tandon.namaTandon ?? tandon.kodeTandon}',
                             style: TextStyle(
-                              color: Colors.blue[600],
+                              color: Colors.cyan[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        if (pupuk != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Pupuk: ${pupuk.namaPupuk}',
+                            style: TextStyle(
+                              color: Colors.orange[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        if (catatan.mediaTanam != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Media Tanam: ${catatan.mediaTanam}',
+                            style: TextStyle(
+                              color: Colors.brown[600],
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -427,7 +544,9 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
       setState(() {
         _selectedStartDate = picked;
       });
-      _loadData();
+      if (mounted) {
+        _loadData();
+      }
     }
   }
 
@@ -442,51 +561,61 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
       setState(() {
         _selectedEndDate = picked;
       });
-      _loadData();
+      if (mounted) {
+        _loadData();
+      }
     }
   }
 
   void _showAddEditDialog({CatatanPembenihanModel? catatan}) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => _AddEditCatatanDialog(
+      builder: (dialogContext) => _AddEditCatatanDialog(
         catatan: catatan,
         onSaved: () {
-          _loadData();
+          if (mounted) {
+            _loadData();
+          }
         },
       ),
     );
   }
 
   void _showDeleteConfirmation(CatatanPembenihanModel catatan) {
+    final scaffoldContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
         content: const Text('Apakah Anda yakin ingin menghapus catatan pembenihan ini?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Batal'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               
-              final benihProvider = Provider.of<BenihProvider>(context, listen: false);
+              if (!mounted) return;
+              
+              final benihProvider = Provider.of<BenihProvider>(scaffoldContext, listen: false);
               final success = await benihProvider.hapusCatatanPembenihan(catatan.idPembenihan);
               
               if (mounted) {
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
                     const SnackBar(
                       content: Text('Catatan pembenihan berhasil dihapus'),
                       backgroundColor: Colors.green,
                     ),
                   );
-                  _loadData();
+                  if (mounted) {
+                    _loadData();
+                  }
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
                     const SnackBar(
                       content: Text('Gagal menghapus catatan pembenihan'),
                       backgroundColor: Colors.red,
@@ -525,11 +654,16 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
   final TextEditingController jumlahController = TextEditingController();
   final TextEditingController satuanController = TextEditingController();
   final TextEditingController kodeBatchController = TextEditingController();
+  final TextEditingController mediaTanamController = TextEditingController();
   final TextEditingController catatanController = TextEditingController();
   
+  DateTime selectedTanggalPembenihan = DateTime.now();
   DateTime selectedTanggalSemai = DateTime.now();
   DateTime? selectedTanggalPanenTarget;
   String? selectedIdBenih;
+  String? selectedIdTandon;
+  String? selectedIdPupuk;
+  String selectedStatus = 'berjalan';
   bool isLoading = false;
 
   @override
@@ -537,11 +671,16 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
     super.initState();
     if (widget.catatan != null) {
       final catatan = widget.catatan!;
+      selectedTanggalPembenihan = catatan.tanggalPembenihan;
       selectedTanggalSemai = catatan.tanggalSemai;
       selectedIdBenih = catatan.idBenih;
+      selectedIdTandon = catatan.idTandon;
+      selectedIdPupuk = catatan.idPupuk;
+      selectedStatus = catatan.status;
       jumlahController.text = catatan.jumlah.toString();
       satuanController.text = catatan.satuan ?? '';
-      kodeBatchController.text = catatan.kodeBatch ?? '';
+      kodeBatchController.text = catatan.kodeBatch;
+      mediaTanamController.text = catatan.mediaTanam ?? '';
       selectedTanggalPanenTarget = catatan.tanggalPanenTarget;
       catatanController.text = catatan.catatan ?? '';
     }
@@ -559,6 +698,22 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Tanggal Pembenihan
+                InkWell(
+                  onTap: () => _selectTanggalPembenihan(),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Tanggal Pembenihan',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      DateFormat('dd/MM/yyyy').format(selectedTanggalPembenihan),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
                 // Tanggal Semai
                 InkWell(
                   onTap: () => _selectTanggalSemai(),
@@ -606,6 +761,79 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                 ),
                 const SizedBox(height: 16),
                 
+                // Tandon Air
+                Consumer<TandonProvider>(
+                  builder: (context, tandonProvider, child) {
+                    return DropdownButtonFormField<String>(
+                      value: selectedIdTandon,
+                      decoration: const InputDecoration(
+                        labelText: 'Tandon Air (Opsional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Pilih Tandon (Opsional)'),
+                        ),
+                        ...tandonProvider.tandonAirList.map((tandon) {
+                          return DropdownMenuItem(
+                            value: tandon.id,
+                            child: Text(tandon.namaTandon ?? tandon.kodeTandon),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedIdTandon = value;
+                        });
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Jenis Pupuk
+                Consumer<PupukProvider>(
+                  builder: (context, pupukProvider, child) {
+                    return DropdownButtonFormField<String>(
+                      value: selectedIdPupuk,
+                      decoration: const InputDecoration(
+                        labelText: 'Jenis Pupuk (Opsional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Pilih Pupuk (Opsional)'),
+                        ),
+                        ...pupukProvider.jenisPupukAktif.map((pupuk) {
+                          return DropdownMenuItem(
+                            value: pupuk.id,
+                            child: Text(pupuk.namaPupuk),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedIdPupuk = value;
+                        });
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Media Tanam
+                TextFormField(
+                  controller: mediaTanamController,
+                  decoration: const InputDecoration(
+                    labelText: 'Media Tanam',
+                    hintText: 'Rockwool, cocopeat, dll',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
                 // Jumlah
                 TextFormField(
                   controller: jumlahController,
@@ -637,14 +865,55 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                 ),
                 const SizedBox(height: 16),
                 
-                // Kode Batch
+                // Kode Batch (Wajib)
                 TextFormField(
                   controller: kodeBatchController,
                   decoration: const InputDecoration(
-                    labelText: 'Kode Batch',
-                    hintText: 'Opsional',
+                    labelText: 'Kode Batch *',
+                    hintText: 'Wajib diisi',
                     border: OutlineInputBorder(),
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Kode batch wajib diisi';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Status
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'berjalan',
+                      child: Text('Berjalan'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'panen',
+                      child: Text('Panen'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'gagal',
+                      child: Text('Gagal'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedStatus = value!;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Pilih status';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 
@@ -701,6 +970,20 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
     );
   }
 
+  Future<void> _selectTanggalPembenihan() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedTanggalPembenihan,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != selectedTanggalPembenihan) {
+      setState(() {
+        selectedTanggalPembenihan = picked;
+      });
+    }
+  }
+
   Future<void> _selectTanggalSemai() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -746,11 +1029,16 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
       if (widget.catatan == null) {
         // Add new
         success = await benihProvider.tambahCatatanPembenihan(
+          tanggalPembenihan: selectedTanggalPembenihan,
           tanggalSemai: selectedTanggalSemai,
           idBenih: selectedIdBenih!,
+          idTandon: selectedIdTandon,
+          idPupuk: selectedIdPupuk,
+          mediaTanam: mediaTanamController.text.isNotEmpty ? mediaTanamController.text : null,
           jumlah: int.parse(jumlahController.text),
           satuan: satuanController.text.isNotEmpty ? satuanController.text : null,
-          kodeBatch: kodeBatchController.text.isNotEmpty ? kodeBatchController.text : null,
+          kodeBatch: kodeBatchController.text,
+          status: selectedStatus,
           tanggalPanenTarget: selectedTanggalPanenTarget,
           catatan: catatanController.text.isNotEmpty ? catatanController.text : null,
           dicatatOleh: authProvider.user?.idPengguna ?? '',
@@ -760,11 +1048,16 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
         success = await benihProvider.updateCatatanPembenihan(
           widget.catatan!.idPembenihan,
           {
+            'tanggal_pembenihan': selectedTanggalPembenihan,
             'tanggal_semai': selectedTanggalSemai,
             'id_benih': selectedIdBenih!,
+            'id_tandon': selectedIdTandon,
+            'id_pupuk': selectedIdPupuk,
+            'media_tanam': mediaTanamController.text.isNotEmpty ? mediaTanamController.text : null,
             'jumlah': int.parse(jumlahController.text),
             'satuan': satuanController.text.isNotEmpty ? satuanController.text : null,
-            'kode_batch': kodeBatchController.text.isNotEmpty ? kodeBatchController.text : null,
+            'kode_batch': kodeBatchController.text,
+            'status': selectedStatus,
             'tanggal_panen_target': selectedTanggalPanenTarget,
             'catatan': catatanController.text.isNotEmpty ? catatanController.text : null,
           },
@@ -823,6 +1116,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
     jumlahController.dispose();
     satuanController.dispose();
     kodeBatchController.dispose();
+    mediaTanamController.dispose();
     catatanController.dispose();
     super.dispose();
   }

@@ -14,19 +14,28 @@ import 'providers/kegagalan_panen_provider.dart';
 import 'providers/jadwal_pemupukan_provider.dart';
 import 'providers/catatan_perlakuan_provider.dart';
 import 'providers/pembelian_benih_provider.dart';
-import 'providers/kategori_pengeluaran_provider.dart';
+
 import 'providers/pelanggan_provider.dart';
 import 'providers/penjualan_harian_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/rekap_benih_mingguan_provider.dart';
 import 'providers/rekap_pupuk_mingguan_provider.dart';
+import 'providers/tipe_pupuk_provider.dart';
+import 'providers/jenis_pelanggan_provider.dart';
+import 'providers/perlakuan_pupuk_provider.dart';
+import 'providers/dropdown_provider.dart';
+import 'services/database_initializer.dart';
 import 'screens/auth_wrapper.dart';
+import 'screens/dropdown_management_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize locale data for Indonesian
   await initializeDateFormatting('id_ID', null);
+  
+  // Initialize SQLite Database
+  await DatabaseInitializer.initialize();
   
   // Initialize Firebase
   await Firebase.initializeApp(
@@ -45,7 +54,35 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BenihProvider()),
-        ChangeNotifierProvider(create: (_) => PupukProvider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = TipePupukProvider();
+            provider.loadTipePupuk(); // Load data saat aplikasi dimulai
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = JenisPelangganProvider();
+            provider.loadJenisPelanggan(); // Load data saat aplikasi dimulai
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = PerlakuanPupukProvider();
+            provider.loadPerlakuanPupuk(); // Load data saat aplikasi dimulai
+            return provider;
+          },
+        ),
+        ChangeNotifierProxyProvider<TipePupukProvider, PupukProvider>(
+          create: (context) => PupukProvider(),
+          update: (context, tipePupukProvider, pupukProvider) {
+            pupukProvider ??= PupukProvider();
+            pupukProvider.setTipePupukProvider(tipePupukProvider);
+            return pupukProvider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => TandonProvider()),
         ChangeNotifierProvider(create: (_) => PengeluaranProvider()),
         ChangeNotifierProvider(create: (_) => MonitoringNutrisiProvider()),
@@ -68,12 +105,6 @@ class MyApp extends StatelessWidget {
           update: (context, authProvider, previous) => 
             previous ?? PembelianBenihProvider(authProvider),
         ),
-        ChangeNotifierProxyProvider<AuthProvider, KategoriPengeluaranProvider>(
-          create: (context) => KategoriPengeluaranProvider(
-            Provider.of<AuthProvider>(context, listen: false),
-          ),
-          update: (context, auth, previous) => KategoriPengeluaranProvider(auth),
-        ),
         ChangeNotifierProvider(create: (_) => PelangganProvider()),
         ChangeNotifierProvider(create: (_) => PenjualanHarianProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
@@ -86,6 +117,13 @@ class MyApp extends StatelessWidget {
           create: (context) => RekapPupukMingguanProvider(context.read<AuthProvider>()),
           update: (context, authProvider, previous) => 
             previous ?? RekapPupukMingguanProvider(authProvider),
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = DropdownProvider();
+            provider.loadAllCategories(); // Load data saat aplikasi dimulai
+            return provider;
+          },
         ),
       ],
       child: MaterialApp(
@@ -122,6 +160,9 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const AuthWrapper(),
+        routes: {
+          '/dropdown_management': (context) => const DropdownManagementScreen(),
+        },
       ),
     );
   }

@@ -349,7 +349,7 @@ class PenanamanSayurProvider with ChangeNotifier {
 
   // Get tahap pertumbuhan options
   List<String> getTahapPertumbuhanOptions() {
-    return ['Semua', 'semai', 'vegetatif', 'siap_panen', 'panen', 'gagal'];
+    return ['Semua', 'semai', 'berjalan', 'vegetatif', 'siap_panen', 'panen', 'gagal'];
   }
 
   // ========================================
@@ -377,6 +377,8 @@ class PenanamanSayurProvider with ChangeNotifier {
     switch (tahap) {
       case 'semai':
         return 'Semai';
+      case 'berjalan':
+        return 'Berjalan';
       case 'vegetatif':
         return 'Vegetatif';
       case 'siap_panen':
@@ -395,6 +397,8 @@ class PenanamanSayurProvider with ChangeNotifier {
     switch (tahap) {
       case 'semai':
         return 'blue';
+      case 'berjalan':
+        return 'teal';
       case 'vegetatif':
         return 'green';
       case 'siap_panen':

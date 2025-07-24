@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/rekap_benih_mingguan_model.dart';
+import '../models/catatan_pembenihan_model.dart';
 import '../services/rekap_benih_mingguan_service.dart';
+import '../services/benih_service.dart';
 import 'auth_provider.dart';
 
 class RekapBenihMingguanProvider extends ChangeNotifier {
@@ -17,7 +19,7 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
   
   // Filter variables
   String _searchQuery = '';
-  String? _selectedJenisBenih;
+  String? _selectedIdPembenihan;
   DateTime? _startDate;
   DateTime? _endDate;
   
@@ -25,7 +27,8 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
   Map<String, dynamic> _statistics = {};
   
   // Dropdown options
-  List<String> _jenisBenihOptions = [];
+  List<CatatanPembenihanModel> _pembenihanList = [];
+  final BenihService _benihService = BenihService();
 
   // Getters
   List<RekapBenihMingguanModel> get rekapList => _filteredList;
@@ -33,11 +36,11 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get error => _errorMessage; // Alias for compatibility
   String get searchQuery => _searchQuery;
-  String? get selectedJenisBenih => _selectedJenisBenih;
+  String? get selectedIdPembenihan => _selectedIdPembenihan;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
   Map<String, dynamic> get statistics => _statistics;
-  List<String> get jenisBenihOptions => _jenisBenihOptions;
+  List<CatatanPembenihanModel> get pembenihanList => _pembenihanList;
 
   // Private methods
   void _setLoading(bool loading) {
@@ -60,12 +63,22 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Load catatan pembenihan list
+  Future<void> loadPembenihanList() async {
+    try {
+      _pembenihanList = await _benihService.getAllCatatanPembenihan();
+      notifyListeners();
+    } catch (e) {
+      _setError('Gagal memuat daftar catatan pembenihan: $e');
+    }
+  }
+
   // Load all rekap benih mingguan
   Future<void> loadRekapBenihMingguan() async {
     _setLoading(true);
     try {
       _rekapList = await _service.getAllRekapBenihMingguan();
-      _updateJenisBenihOptions();
+      await loadPembenihanList();
       _applyFilters();
       _clearError();
     } catch (e) {
@@ -87,7 +100,6 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
       final addedRekap = newRekap.copyWith(idRekap: id);
       
       _rekapList.insert(0, addedRekap);
-      _updateJenisBenihOptions();
       _applyFilters();
       
       return true;
@@ -105,7 +117,6 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
       final index = _rekapList.indexWhere((r) => r.idRekap == id);
       if (index != -1) {
         _rekapList[index] = rekap.copyWith(idRekap: id);
-        _updateJenisBenihOptions();
         _applyFilters();
       }
       
@@ -121,7 +132,6 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     try {
       await _service.deleteRekapBenihMingguan(id);
       _rekapList.removeWhere((r) => r.idRekap == id);
-      _updateJenisBenihOptions();
       _applyFilters();
       return true;
     } catch (e) {
@@ -145,9 +155,9 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     _applyFilters();
   }
 
-  // Filter by jenis benih
-  void setSelectedJenisBenih(String? jenisBenih) {
-    _selectedJenisBenih = jenisBenih;
+  // Filter by catatan pembenihan
+  void setSelectedIdPembenihan(String? idPembenihan) {
+    _selectedIdPembenihan = idPembenihan;
     _applyFilters();
   }
 
@@ -161,7 +171,7 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
   // Clear all filters
   void clearFilters() {
     _searchQuery = '';
-    _selectedJenisBenih = null;
+    _selectedIdPembenihan = null;
     _startDate = null;
     _endDate = null;
     _applyFilters();
@@ -173,14 +183,13 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
       // Search query filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        if (!rekap.jenisBenih.toLowerCase().contains(query) &&
-            !(rekap.catatan?.toLowerCase().contains(query) ?? false)) {
+        if (!(rekap.catatan?.toLowerCase().contains(query) ?? false)) {
           return false;
         }
       }
 
-      // Jenis benih filter
-      if (_selectedJenisBenih != null && rekap.jenisBenih != _selectedJenisBenih) {
+      // Catatan pembenihan filter
+      if (_selectedIdPembenihan != null && rekap.idPembenihan != _selectedIdPembenihan) {
         return false;
       }
 
@@ -198,11 +207,7 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Update jenis benih options from current data
-  void _updateJenisBenihOptions() {
-    final Set<String> uniqueJenis = _rekapList.map((r) => r.jenisBenih).toSet();
-    _jenisBenihOptions = uniqueJenis.toList()..sort();
-  }
+
 
   // Load statistics
   Future<void> loadStatistics() async {
@@ -229,7 +234,7 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       _rekapList = await _service.getRekapBenihMingguanThisWeek();
-      _updateJenisBenihOptions();
+      await loadPembenihanList();
       _applyFilters();
       _clearError();
     } catch (e) {
@@ -244,7 +249,7 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       _rekapList = await _service.getRekapBenihMingguanThisMonth();
-      _updateJenisBenihOptions();
+      await loadPembenihanList();
       _applyFilters();
       _clearError();
     } catch (e) {
@@ -254,10 +259,10 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     }
   }
 
-  // Get total nampan by jenis benih
-  int getTotalNampanByJenis(String jenisBenih) {
+  // Get total nampan by catatan pembenihan
+  int getTotalNampanByPembenihan(String idPembenihan) {
     return _filteredList
-        .where((rekap) => rekap.jenisBenih == jenisBenih)
+        .where((rekap) => rekap.idPembenihan == idPembenihan)
         .fold<int>(0, (sum, rekap) => sum + rekap.jumlahNampan);
   }
 
@@ -272,68 +277,81 @@ class RekapBenihMingguanProvider extends ChangeNotifier {
     return getTotalNampan() / _filteredList.length;
   }
 
-  // Get most popular jenis benih
-  String getMostPopularJenisBenih() {
+  // Get most popular catatan pembenihan
+  String getMostPopularPembenihan() {
     if (_filteredList.isEmpty) return '';
     
-    final Map<String, int> jenisCount = {};
+    final Map<String, int> pembenihanCount = {};
     for (final rekap in _filteredList) {
-      jenisCount[rekap.jenisBenih] = (jenisCount[rekap.jenisBenih] ?? 0) + rekap.jumlahNampan;
+      if (rekap.idPembenihan != null) {
+        pembenihanCount[rekap.idPembenihan!] = (pembenihanCount[rekap.idPembenihan!] ?? 0) + rekap.jumlahNampan;
+      }
     }
     
     String mostPopular = '';
     int maxCount = 0;
-    jenisCount.forEach((jenis, count) {
+    pembenihanCount.forEach((idPembenihan, count) {
       if (count > maxCount) {
         maxCount = count;
-        mostPopular = jenis;
+        mostPopular = idPembenihan;
       }
     });
     
     return mostPopular;
   }
 
-  // Get distribution by jenis benih
-  Map<String, int> getDistributionByJenisBenih() {
+  // Get distribution by catatan pembenihan
+  Map<String, int> getDistributionByPembenihan() {
     final Map<String, int> distribution = {};
     for (final rekap in _filteredList) {
-      distribution[rekap.jenisBenih] = (distribution[rekap.jenisBenih] ?? 0) + rekap.jumlahNampan;
+      if (rekap.idPembenihan != null) {
+        distribution[rekap.idPembenihan!] = (distribution[rekap.idPembenihan!] ?? 0) + rekap.jumlahNampan;
+      }
     }
     return distribution;
+  }
+
+  // Get pembenihan name by ID
+  String getPembenihanName(String? idPembenihan) {
+    if (idPembenihan == null) return 'Unknown';
+    try {
+      final pembenihan = _pembenihanList.firstWhere(
+        (p) => p.idPembenihan == idPembenihan,
+      );
+      return pembenihan.kodeBatch;
+    } catch (e) {
+      return 'Unknown';
+    }
   }
 
   // Initialize with default data
   Future<void> initializeWithDefaultData() async {
     _setLoading(true);
     try {
-      // Create default data for current week
-      final now = DateTime.now();
-      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-      final endOfWeek = startOfWeek.add(const Duration(days: 6));
+      // Load pembenihan list first
+      await loadPembenihanList();
       
-      final defaultData = [
-        RekapBenihMingguanModel(
-          tanggalMulai: startOfWeek,
-          tanggalSelesai: endOfWeek,
-          jenisBenih: 'Selada',
-          jumlahNampan: 30,
-          catatan: 'Rekap benih mingguan selada',
-          dicatatOleh: _authProvider.currentUser?.idPengguna ?? 'system',
-          dicatatPada: DateTime.now(),
-        ),
-        RekapBenihMingguanModel(
-          tanggalMulai: startOfWeek,
-          tanggalSelesai: endOfWeek,
-          jenisBenih: 'Romaine',
-          jumlahNampan: 15,
-          catatan: 'Rekap benih mingguan romaine',
-          dicatatOleh: _authProvider.currentUser?.idPengguna ?? 'system',
-          dicatatPada: DateTime.now(),
-        ),
-      ];
-      
-      for (final rekap in defaultData) {
-        await addRekapBenihMingguan(rekap);
+      // Create default data for current week if pembenihan data exists
+      if (_pembenihanList.isNotEmpty) {
+        final now = DateTime.now();
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+        
+        final defaultData = [
+          RekapBenihMingguanModel(
+            tanggalMulai: startOfWeek,
+            tanggalSelesai: endOfWeek,
+            idPembenihan: _pembenihanList.first.idPembenihan,
+            jumlahNampan: 30,
+            catatan: 'Rekap benih mingguan default',
+            dicatatOleh: _authProvider.currentUser?.idPengguna ?? 'system',
+            dicatatPada: DateTime.now(),
+          ),
+        ];
+        
+        for (final rekap in defaultData) {
+          await addRekapBenihMingguan(rekap);
+        }
       }
       
       _clearError();

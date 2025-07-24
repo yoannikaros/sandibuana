@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/pengeluaran_harian_model.dart';
-import '../models/kategori_pengeluaran_model.dart';
 import '../providers/pengeluaran_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -125,8 +124,8 @@ class _PengeluaranHarianScreenState extends State<PengeluaranHarianScreen> {
                         ),
                         ...provider.kategoriList.map((kategori) {
                           return DropdownMenuItem(
-                            value: kategori.id,
-                            child: Text(kategori.namaKategori),
+                            value: kategori,
+                            child: Text(kategori),
                           );
                         }),
                       ],
@@ -322,7 +321,7 @@ class _PengeluaranHarianScreenState extends State<PengeluaranHarianScreen> {
   }
 
   Widget _buildPengeluaranCard(PengeluaranHarianModel pengeluaran, PengeluaranProvider provider) {
-    final kategoriName = provider.getKategoriName(pengeluaran.idKategori);
+    final kategoriName = pengeluaran.kategori;
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -548,7 +547,7 @@ class _PengeluaranHarianScreenState extends State<PengeluaranHarianScreen> {
     final pemasokController = TextEditingController(text: pengeluaran?.pemasok ?? '');
     final catatanController = TextEditingController(text: pengeluaran?.catatan ?? '');
     
-    String? selectedKategoriId = pengeluaran?.idKategori;
+    String? selectedKategoriId = pengeluaran?.kategori;
     DateTime selectedDate = pengeluaran?.tanggalPengeluaran ?? DateTime.now();
 
     showDialog(
@@ -592,8 +591,8 @@ class _PengeluaranHarianScreenState extends State<PengeluaranHarianScreen> {
                       ),
                       items: provider.kategoriList.map((kategori) {
                         return DropdownMenuItem(
-                          value: kategori.id,
-                          child: Text(kategori.namaKategori),
+                          value: kategori,
+                          child: Text(kategori),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -694,7 +693,7 @@ class _PengeluaranHarianScreenState extends State<PengeluaranHarianScreen> {
                 final newPengeluaran = PengeluaranHarianModel(
                   id: pengeluaran?.id ?? '',
                   tanggalPengeluaran: selectedDate,
-                  idKategori: selectedKategoriId!,
+                  kategori: selectedKategoriId!,
                   keterangan: keteranganController.text.trim(),
                   jumlah: double.tryParse(jumlahController.text.trim()) ?? 0,
                   nomorNota: nomorNotaController.text.trim().isEmpty ? null : nomorNotaController.text.trim(),

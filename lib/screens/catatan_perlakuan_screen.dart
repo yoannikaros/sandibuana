@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/catatan_perlakuan_model.dart';
 import '../providers/catatan_perlakuan_provider.dart';
+import '../providers/auth_provider.dart';
 
 class CatatanPerlakuanScreen extends StatefulWidget {
   const CatatanPerlakuanScreen({Key? key}) : super(key: key);
@@ -61,6 +62,9 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                   context.read<CatatanPerlakuanProvider>().clearFilters();
                   _searchController.clear();
                   break;
+                case 'manage_dropdown':
+                  Navigator.pushNamed(context, '/dropdown_management');
+                  break;
               }
             },
             itemBuilder: (context) => [
@@ -81,6 +85,16 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                     Icon(Icons.clear_all),
                     SizedBox(width: 8),
                     Text('Clear Filters'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'manage_dropdown',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings),
+                    SizedBox(width: 8),
+                    Text('Kelola Pilihan'),
                   ],
                 ),
               ),
@@ -228,12 +242,6 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                       'Jenis: ${provider.selectedJenis}',
                       provider.selectedJenis != 'Semua',
                       () => _showJenisFilterDialog(context),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      'Area: ${provider.selectedArea}',
-                      provider.selectedArea != 'Semua',
-                      () => _showAreaFilterDialog(context),
                     ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
@@ -393,6 +401,40 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                   ),
                 ),
               ],
+              // Relasi Information
+               if (perlakuan.idPenanaman != null || perlakuan.idPembenihan != null) ...[
+                const SizedBox(height: 8),
+                Consumer<CatatanPerlakuanProvider>(
+                  builder: (context, provider, child) {
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.link, size: 16, color: Colors.blue[600]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              perlakuan.getDisplayRelasiWithDetail(provider.penanamanSayurList),
+                              style: TextStyle(
+                                color: Colors.blue[700],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -458,14 +500,7 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                 _showJenisFilterDialog(context);
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Filter by Area'),
-              onTap: () {
-                Navigator.pop(context);
-                _showAreaFilterDialog(context);
-              },
-            ),
+            // Area filter removed - no longer needed
             ListTile(
               leading: const Icon(Icons.star),
               title: const Text('Filter by Rating'),
@@ -540,44 +575,7 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
     );
   }
 
-  void _showAreaFilterDialog(BuildContext context) {
-    final provider = context.read<CatatanPerlakuanProvider>();
-    final areaOptions = provider.getUniqueAreaTanaman();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Area Tanaman'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: areaOptions.length,
-            itemBuilder: (context, index) {
-              final area = areaOptions[index];
-              return RadioListTile<String>(
-                title: Text(area),
-                value: area,
-                groupValue: provider.selectedArea,
-                onChanged: (value) {
-                  if (value != null) {
-                    provider.setAreaFilter(value);
-                    Navigator.pop(context);
-                  }
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed _showAreaFilterDialog - no longer needed
 
   void _showRatingFilterDialog(BuildContext context) {
     final provider = context.read<CatatanPerlakuanProvider>();
@@ -655,8 +653,8 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Statistik by Area'),
+              leading: const Icon(Icons.link),
+              title: const Text('Statistik by Relasi'),
               onTap: () {
                 Navigator.pop(context);
                 _showStatistikAreaDialog(context);
@@ -755,14 +753,14 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
 
   void _showStatistikAreaDialog(BuildContext context) async {
     final provider = context.read<CatatanPerlakuanProvider>();
-    final statistik = await provider.getStatistikByArea();
+    final statistik = await provider.getStatistikByRelasi();
 
     if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Statistik by Area'),
+        title: const Text('Statistik by Relasi'),
         content: SizedBox(
           width: double.maxFinite,
           height: 300,
@@ -771,11 +769,11 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Jumlah per Area:',
+                  'Jumlah per Relasi:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...((statistik['area_count'] as Map<String, dynamic>?) ?? {})
+                ...((statistik['relasi_count'] as Map<String, dynamic>?) ?? {})
                     .entries
                     .map((entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
@@ -793,7 +791,7 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...((statistik['area_avg_rating'] as Map<String, dynamic>?) ?? {})
+                ...((statistik['relasi_avg_rating'] as Map<String, dynamic>?) ?? {})
                     .entries
                     .map((entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
@@ -877,7 +875,7 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                     .map((item) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
-                            '• ${item['jenis_perlakuan']} - ${item['area_tanaman']}',
+                            '• ${item['jenis_perlakuan']} - ${item['relasi']} (${item['nama_user']})',
                             style: const TextStyle(fontSize: 12),
                           ),
                         )),
@@ -892,7 +890,7 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                     .map((item) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
-                            '• ${item['jenis_perlakuan']} - ${item['area_tanaman']} (Rating ${item['rating']})',
+                            '• ${item['jenis_perlakuan']} - ${item['relasi']} (Rating ${item['rating']}) - ${item['nama_user']}',
                             style: const TextStyle(fontSize: 12, color: Colors.red),
                           ),
                         )),
@@ -923,8 +921,13 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildDetailRow('Tanggal Perlakuan', perlakuan.formattedTanggalPerlakuan),
-                _buildDetailRow('Area Tanaman', perlakuan.displayAreaTanaman),
-                _buildDetailRow('Bahan Digunakan', perlakuan.displayBahanDigunakan),
+                Consumer<CatatanPerlakuanProvider>(
+                  builder: (context, provider, child) {
+                    return _buildDetailRow('Relasi', 
+                        perlakuan.getDisplayRelasiWithDetail(provider.penanamanSayurList));
+                  },
+                ),
+                _buildDetailRow('Dicatat Oleh', perlakuan.namaUser),
                 _buildDetailRow('Jumlah', perlakuan.formattedJumlahDigunakan),
                 _buildDetailRow('Metode', perlakuan.displayMetode),
                 _buildDetailRow('Kondisi Cuaca', perlakuan.displayKondisiCuaca),
@@ -989,8 +992,8 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
     
     DateTime selectedDate = perlakuan?.tanggalPerlakuan ?? DateTime.now();
     String selectedJenis = perlakuan?.jenisPerlakuan ?? CatatanPerlakuanModel.getJenisPerlakuanOptions().first;
-    String? selectedArea = perlakuan?.areaTanaman;
-    String? selectedBahan = perlakuan?.bahanDigunakan;
+    String? selectedIdPenanaman = perlakuan?.idPenanaman;
+    String? selectedIdPembenihan = perlakuan?.idPembenihan;
     double? jumlahDigunakan = perlakuan?.jumlahDigunakan;
     String? selectedSatuan = perlakuan?.satuan;
     String? selectedMetode = perlakuan?.metode;
@@ -998,7 +1001,6 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
     int? selectedRating = perlakuan?.ratingEfektivitas;
     String? catatan = perlakuan?.catatan;
 
-    final bahanController = TextEditingController(text: selectedBahan);
     final jumlahController = TextEditingController(text: jumlahDigunakan?.toString());
     final catatanController = TextEditingController(text: catatan);
 
@@ -1037,62 +1039,101 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                     const SizedBox(height: 16),
                     
                     // Jenis Perlakuan
-                    DropdownButtonFormField<String>(
-                      value: selectedJenis,
-                      decoration: const InputDecoration(
-                        labelText: 'Jenis Perlakuan *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: CatatanPerlakuanModel.getJenisPerlakuanOptions()
-                          .map((jenis) => DropdownMenuItem(
-                                value: jenis,
-                                child: Text(jenis),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedJenis = value!;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Jenis perlakuan harus dipilih';
+                    Consumer<CatatanPerlakuanProvider>(
+                      builder: (context, provider, child) {
+                        final options = provider.jenisPerlakuanValues;
+                        if (options.isEmpty) {
+                          return const CircularProgressIndicator();
                         }
-                        return null;
+                        
+                        // Ensure selectedJenis is valid
+                        if (!options.contains(selectedJenis)) {
+                          selectedJenis = options.first;
+                        }
+                        
+                        return DropdownButtonFormField<String>(
+                          value: selectedJenis,
+                          decoration: const InputDecoration(
+                            labelText: 'Jenis Perlakuan *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: options
+                              .map((jenis) => DropdownMenuItem(
+                                    value: jenis,
+                                    child: Text(jenis),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedJenis = value!;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Jenis perlakuan harus dipilih';
+                            }
+                            return null;
+                          },
+                        );
                       },
                     ),
                     const SizedBox(height: 16),
                     
-                    // Area Tanaman
+                    // Relasi dengan Penanaman Sayur
+                    Consumer<CatatanPerlakuanProvider>(
+                      builder: (context, provider, child) {
+                        final penanamanList = provider.penanamanSayurList;
+                        
+                        return DropdownButtonFormField<String>(
+                          value: selectedIdPenanaman,
+                          decoration: const InputDecoration(
+                            labelText: 'Relasi Penanaman Sayur (Opsional)',
+                            border: OutlineInputBorder(),
+                            helperText: 'Pilih penanaman sayur yang terkait',
+                          ),
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: null,
+                              child: Text('Tidak ada relasi'),
+                            ),
+                            ...penanamanList.map((penanaman) => DropdownMenuItem<String>(
+                               value: penanaman.idPenanaman,
+                               child: Text(
+                                 '${penanaman.jenisSayur} - ${penanaman.formattedTanggalTanam} (${penanaman.displayTahapPertumbuhan})',
+                                 style: const TextStyle(fontSize: 14),
+                               ),
+                             )),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedIdPenanaman = value;
+                              if (value != null) selectedIdPembenihan = null; // Reset pembenihan jika penanaman dipilih
+                            });
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Relasi dengan Catatan Pembenihan
                     DropdownButtonFormField<String>(
-                      value: selectedArea,
+                      value: selectedIdPembenihan,
                       decoration: const InputDecoration(
-                        labelText: 'Area Tanaman',
+                        labelText: 'Relasi Catatan Pembenihan (Opsional)',
                         border: OutlineInputBorder(),
+                        helperText: 'Pilih catatan pembenihan yang terkait',
                       ),
-                      items: [null, ...CatatanPerlakuanModel.getAreaTanamanOptions()]
-                          .map((area) => DropdownMenuItem(
-                                value: area,
-                                child: Text(area ?? 'Pilih Area'),
+                      items: [null, 'PEM001', 'PEM002', 'PEM003'] // TODO: Load from provider
+                          .map((id) => DropdownMenuItem(
+                                value: id,
+                                child: Text(id ?? 'Tidak ada relasi'),
                               ))
                           .toList(),
                       onChanged: (value) {
                         setState(() {
-                          selectedArea = value;
+                          selectedIdPembenihan = value;
+                          if (value != null) selectedIdPenanaman = null; // Reset penanaman jika pembenihan dipilih
                         });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Bahan Digunakan
-                    TextFormField(
-                      controller: bahanController,
-                      decoration: const InputDecoration(
-                        labelText: 'Bahan Digunakan',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        selectedBahan = value.isEmpty ? null : value;
                       },
                     ),
                     const SizedBox(height: 16),
@@ -1149,22 +1190,28 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                     const SizedBox(height: 16),
                     
                     // Metode
-                    DropdownButtonFormField<String>(
-                      value: selectedMetode,
-                      decoration: const InputDecoration(
-                        labelText: 'Metode',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [null, ...CatatanPerlakuanModel.getMetodeOptions()]
-                          .map((metode) => DropdownMenuItem(
-                                value: metode,
-                                child: Text(metode ?? 'Pilih Metode'),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedMetode = value;
-                        });
+                    Consumer<CatatanPerlakuanProvider>(
+                      builder: (context, provider, child) {
+                        final options = provider.metodeValues;
+                        
+                        return DropdownButtonFormField<String>(
+                          value: selectedMetode,
+                          decoration: const InputDecoration(
+                            labelText: 'Metode',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: [null, ...options]
+                              .map((metode) => DropdownMenuItem(
+                                    value: metode,
+                                    child: Text(metode ?? 'Pilih Metode'),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedMetode = value;
+                            });
+                          },
+                        );
                       },
                     ),
                     const SizedBox(height: 16),
@@ -1268,25 +1315,27 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                   bool success;
                   
                   if (isEdit) {
-                    final updateData = {
-                      'tanggal_perlakuan': Timestamp.fromDate(selectedDate),
-                      'jenis_perlakuan': selectedJenis,
-                      if (selectedArea != null) 'area_tanaman': selectedArea,
-                      if (selectedBahan != null) 'bahan_digunakan': selectedBahan,
-                      if (jumlahDigunakan != null) 'jumlah_digunakan': jumlahDigunakan,
-                      if (selectedSatuan != null) 'satuan': selectedSatuan,
-                      if (selectedMetode != null) 'metode': selectedMetode,
-                      if (selectedCuaca != null) 'kondisi_cuaca': selectedCuaca,
-                      if (selectedRating != null) 'rating_efektivitas': selectedRating,
-                      if (catatan != null) 'catatan': catatan,
-                    };
-                    success = await provider.updateCatatanPerlakuan(perlakuan!.idPerlakuan!, updateData);
+                    final authProvider = context.read<AuthProvider>();
+                    success = await provider.updateCatatanPerlakuan(
+                      perlakuan!.idPerlakuan!,
+                      tanggalPerlakuan: selectedDate,
+                      jenisPerlakuan: selectedJenis,
+                      idPenanaman: selectedIdPenanaman,
+                      idPembenihan: selectedIdPembenihan,
+                      namaUser: authProvider.user?.namaLengkap ?? 'Unknown',
+                      jumlahDigunakan: jumlahDigunakan,
+                      satuan: selectedSatuan,
+                      metode: selectedMetode,
+                      kondisiCuaca: selectedCuaca,
+                      ratingEfektivitas: selectedRating,
+                      catatan: catatan,
+                    );
                   } else {
                     success = await provider.tambahCatatanPerlakuan(
                       tanggalPerlakuan: selectedDate,
                       jenisPerlakuan: selectedJenis,
-                      areaTanaman: selectedArea,
-                      bahanDigunakan: selectedBahan,
+                      idPenanaman: selectedIdPenanaman,
+                      idPembenihan: selectedIdPembenihan,
                       jumlahDigunakan: jumlahDigunakan,
                       satuan: selectedSatuan,
                       metode: selectedMetode,

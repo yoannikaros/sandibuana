@@ -27,6 +27,11 @@ class TandonService {
     }
   }
 
+  // Alias method for getAllTandonAir (for backward compatibility)
+  Future<List<TandonAirModel>> getAllTandon() async {
+    return getAllTandonAir();
+  }
+
   // Get active tandon air only
   Future<List<TandonAirModel>> getTandonAirAktif() async {
     try {

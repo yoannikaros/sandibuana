@@ -3,27 +3,31 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class MonitoringNutrisiModel {
   final String id;
   final DateTime tanggalMonitoring;
-  final String idTandon;
+  final String? idPembenihan; // Reference to catatan_pembenihan (optional)
+  final String? idPenanaman; // Reference to penanaman_sayur (optional)
+  final String? idTandon; // Reference to tandon_air (optional)
   final double? nilaiPpm;
   final double? airDitambah; // liter
   final double? nutrisiDitambah; // ml atau gram
   final double? tingkatPh;
   final double? suhuAir;
   final String? catatan;
-  final String? dicatatOleh;
+  final String dicatatOleh; // Required - auto filled from logged in user
   final DateTime dicatatPada;
 
   MonitoringNutrisiModel({
     required this.id,
     required this.tanggalMonitoring,
-    required this.idTandon,
+    this.idPembenihan,
+    this.idPenanaman,
+    this.idTandon,
     this.nilaiPpm,
     this.airDitambah,
     this.nutrisiDitambah,
     this.tingkatPh,
     this.suhuAir,
     this.catatan,
-    this.dicatatOleh,
+    required this.dicatatOleh,
     required this.dicatatPada,
   });
 
@@ -33,14 +37,16 @@ class MonitoringNutrisiModel {
     return MonitoringNutrisiModel(
       id: doc.id,
       tanggalMonitoring: (data['tanggal_monitoring'] as Timestamp).toDate(),
-      idTandon: data['id_tandon'] ?? '',
+      idPembenihan: data['id_pembenihan'],
+      idPenanaman: data['id_penanaman'],
+      idTandon: data['id_tandon'],
       nilaiPpm: data['nilai_ppm']?.toDouble(),
       airDitambah: data['air_ditambah']?.toDouble(),
       nutrisiDitambah: data['nutrisi_ditambah']?.toDouble(),
       tingkatPh: data['tingkat_ph']?.toDouble(),
       suhuAir: data['suhu_air']?.toDouble(),
       catatan: data['catatan'],
-      dicatatOleh: data['dicatat_oleh'],
+      dicatatOleh: data['dicatat_oleh'] ?? '',
       dicatatPada: (data['dicatat_pada'] as Timestamp).toDate(),
     );
   }
@@ -49,6 +55,8 @@ class MonitoringNutrisiModel {
   Map<String, dynamic> toFirestore() {
     return {
       'tanggal_monitoring': Timestamp.fromDate(tanggalMonitoring),
+      'id_pembenihan': idPembenihan,
+      'id_penanaman': idPenanaman,
       'id_tandon': idTandon,
       'nilai_ppm': nilaiPpm,
       'air_ditambah': airDitambah,
@@ -65,6 +73,8 @@ class MonitoringNutrisiModel {
   MonitoringNutrisiModel copyWith({
     String? id,
     DateTime? tanggalMonitoring,
+    String? idPembenihan,
+    String? idPenanaman,
     String? idTandon,
     double? nilaiPpm,
     double? airDitambah,
@@ -78,6 +88,8 @@ class MonitoringNutrisiModel {
     return MonitoringNutrisiModel(
       id: id ?? this.id,
       tanggalMonitoring: tanggalMonitoring ?? this.tanggalMonitoring,
+      idPembenihan: idPembenihan ?? this.idPembenihan,
+      idPenanaman: idPenanaman ?? this.idPenanaman,
       idTandon: idTandon ?? this.idTandon,
       nilaiPpm: nilaiPpm ?? this.nilaiPpm,
       airDitambah: airDitambah ?? this.airDitambah,
@@ -92,7 +104,7 @@ class MonitoringNutrisiModel {
 
   @override
   String toString() {
-    return 'MonitoringNutrisiModel(id: $id, tanggalMonitoring: $tanggalMonitoring, idTandon: $idTandon, nilaiPpm: $nilaiPpm, airDitambah: $airDitambah, nutrisiDitambah: $nutrisiDitambah, tingkatPh: $tingkatPh, suhuAir: $suhuAir, catatan: $catatan, dicatatOleh: $dicatatOleh, dicatatPada: $dicatatPada)';
+    return 'MonitoringNutrisiModel(id: $id, tanggalMonitoring: $tanggalMonitoring, idPembenihan: $idPembenihan, idPenanaman: $idPenanaman, idTandon: $idTandon, nilaiPpm: $nilaiPpm, airDitambah: $airDitambah, nutrisiDitambah: $nutrisiDitambah, tingkatPh: $tingkatPh, suhuAir: $suhuAir, catatan: $catatan, dicatatOleh: $dicatatOleh, dicatatPada: $dicatatPada)';
   }
 
   @override
@@ -101,6 +113,8 @@ class MonitoringNutrisiModel {
     return other is MonitoringNutrisiModel &&
         other.id == id &&
         other.tanggalMonitoring == tanggalMonitoring &&
+        other.idPembenihan == idPembenihan &&
+        other.idPenanaman == idPenanaman &&
         other.idTandon == idTandon &&
         other.nilaiPpm == nilaiPpm &&
         other.airDitambah == airDitambah &&
@@ -116,6 +130,8 @@ class MonitoringNutrisiModel {
   int get hashCode {
     return id.hashCode ^
         tanggalMonitoring.hashCode ^
+        idPembenihan.hashCode ^
+        idPenanaman.hashCode ^
         idTandon.hashCode ^
         nilaiPpm.hashCode ^
         airDitambah.hashCode ^

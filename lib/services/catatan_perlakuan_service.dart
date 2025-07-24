@@ -10,8 +10,8 @@ class CatatanPerlakuanService {
     required DateTime tanggalPerlakuan,
     String? idJadwal,
     required String jenisPerlakuan,
-    String? areaTanaman,
-    String? bahanDigunakan,
+    String? idPenanaman,
+    String? idPembenihan,
     double? jumlahDigunakan,
     String? satuan,
     String? metode,
@@ -19,6 +19,7 @@ class CatatanPerlakuanService {
     int? ratingEfektivitas,
     String? catatan,
     required String dicatatOleh,
+    required String namaUser,
   }) async {
     try {
       final perlakuan = CatatanPerlakuanModel(
@@ -26,8 +27,8 @@ class CatatanPerlakuanService {
         tanggalPerlakuan: tanggalPerlakuan,
         idJadwal: idJadwal,
         jenisPerlakuan: jenisPerlakuan,
-        areaTanaman: areaTanaman,
-        bahanDigunakan: bahanDigunakan,
+        idPenanaman: idPenanaman,
+        idPembenihan: idPembenihan,
         jumlahDigunakan: jumlahDigunakan,
         satuan: satuan,
         metode: metode,
@@ -35,6 +36,7 @@ class CatatanPerlakuanService {
         ratingEfektivitas: ratingEfektivitas,
         catatan: catatan,
         dicatatOleh: dicatatOleh,
+        namaUser: namaUser,
         dicatatPada: DateTime.now(),
       );
 
@@ -127,22 +129,7 @@ class CatatanPerlakuanService {
     }
   }
 
-  // Ambil catatan perlakuan berdasarkan area tanaman
-  Future<List<CatatanPerlakuanModel>> getCatatanPerlakuanByArea(String areaTanaman) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('area_tanaman', isEqualTo: areaTanaman)
-          .orderBy('tanggal_perlakuan', descending: true)
-          .get();
-
-      return querySnapshot.docs
-          .map((doc) => CatatanPerlakuanModel.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      throw Exception('Gagal mengambil catatan perlakuan area $areaTanaman: $e');
-    }
-  }
+  // Removed getCatatanPerlakuanByArea - no longer needed
 
   // Ambil catatan perlakuan berdasarkan rating
   Future<List<CatatanPerlakuanModel>> getCatatanPerlakuanByRating(int rating) async {
@@ -180,10 +167,36 @@ class CatatanPerlakuanService {
 
   // Update catatan perlakuan
   Future<void> updateCatatanPerlakuan(
-    String idPerlakuan,
-    Map<String, dynamic> updateData,
-  ) async {
+    String idPerlakuan, {
+    required DateTime tanggalPerlakuan,
+    required String jenisPerlakuan,
+    String? idPenanaman,
+    String? idPembenihan,
+    required String namaUser,
+    double? jumlahDigunakan,
+    String? satuan,
+    String? metode,
+    String? kondisiCuaca,
+    int? ratingEfektivitas,
+    String? catatan,
+  }) async {
     try {
+      final updateData = {
+        'tanggal_perlakuan': Timestamp.fromDate(tanggalPerlakuan),
+        'jenis_perlakuan': jenisPerlakuan,
+        'nama_user': namaUser,
+        'diubah_pada': FieldValue.serverTimestamp(),
+      };
+      
+      if (idPenanaman != null) updateData['id_penanaman'] = idPenanaman;
+      if (idPembenihan != null) updateData['id_pembenihan'] = idPembenihan;
+      if (jumlahDigunakan != null) updateData['jumlah_digunakan'] = jumlahDigunakan;
+      if (satuan != null) updateData['satuan'] = satuan;
+      if (metode != null) updateData['metode'] = metode;
+      if (kondisiCuaca != null) updateData['kondisi_cuaca'] = kondisiCuaca;
+      if (ratingEfektivitas != null) updateData['rating_efektivitas'] = ratingEfektivitas;
+      if (catatan != null) updateData['catatan'] = catatan;
+      
       await _firestore.collection(_collection).doc(idPerlakuan).update(updateData);
     } catch (e) {
       throw Exception('Gagal mengupdate catatan perlakuan: $e');
@@ -236,40 +249,40 @@ class CatatanPerlakuanService {
     }
   }
 
-  // Statistik perlakuan berdasarkan area
-  Future<Map<String, dynamic>> getStatistikByArea() async {
+  // Statistik perlakuan berdasarkan relasi
+  Future<Map<String, dynamic>> getStatistikByRelasi() async {
     try {
       final querySnapshot = await _firestore.collection(_collection).get();
       final List<CatatanPerlakuanModel> allPerlakuan = querySnapshot.docs
           .map((doc) => CatatanPerlakuanModel.fromFirestore(doc))
           .toList();
 
-      Map<String, int> areaCount = {};
-      Map<String, List<int>> areaRatings = {};
+      Map<String, int> relasiCount = {};
+      Map<String, List<int>> relasiRatings = {};
 
       for (final perlakuan in allPerlakuan) {
-        final area = perlakuan.areaTanaman ?? 'Tidak Ditentukan';
-        areaCount[area] = (areaCount[area] ?? 0) + 1;
+        final relasi = perlakuan.displayRelasi;
+        relasiCount[relasi] = (relasiCount[relasi] ?? 0) + 1;
         
         if (perlakuan.ratingEfektivitas != null) {
-          areaRatings[area] ??= [];
-          areaRatings[area]!.add(perlakuan.ratingEfektivitas!);
+          relasiRatings[relasi] ??= [];
+          relasiRatings[relasi]!.add(perlakuan.ratingEfektivitas!);
         }
       }
 
-      Map<String, double> areaAvgRating = {};
-      areaRatings.forEach((area, ratings) {
+      Map<String, double> relasiAvgRating = {};
+      relasiRatings.forEach((relasi, ratings) {
         if (ratings.isNotEmpty) {
-          areaAvgRating[area] = ratings.reduce((a, b) => a + b) / ratings.length;
+          relasiAvgRating[relasi] = ratings.reduce((a, b) => a + b) / ratings.length;
         }
       });
 
       return {
-        'area_count': areaCount,
-        'area_avg_rating': areaAvgRating,
+        'relasi_count': relasiCount,
+        'relasi_avg_rating': relasiAvgRating,
       };
     } catch (e) {
-      throw Exception('Gagal mengambil statistik area: $e');
+      throw Exception('Gagal mengambil statistik relasi: $e');
     }
   }
 
@@ -354,9 +367,9 @@ class CatatanPerlakuanService {
           .where((p) => p.ratingEfektivitas == 5)
           .map((p) => {
                 'jenis_perlakuan': p.jenisPerlakuan,
-                'area_tanaman': p.areaTanaman,
+                'relasi': p.displayRelasi,
                 'tanggal_perlakuan': p.tanggalPerlakuan,
-                'bahan_digunakan': p.bahanDigunakan,
+                'nama_user': p.namaUser,
               })
           .toList();
 
@@ -365,10 +378,10 @@ class CatatanPerlakuanService {
           .where((p) => p.ratingEfektivitas! <= 2)
           .map((p) => {
                 'jenis_perlakuan': p.jenisPerlakuan,
-                'area_tanaman': p.areaTanaman,
+                'relasi': p.displayRelasi,
                 'tanggal_perlakuan': p.tanggalPerlakuan,
                 'rating': p.ratingEfektivitas,
-                'bahan_digunakan': p.bahanDigunakan,
+                'nama_user': p.namaUser,
               })
           .toList();
 

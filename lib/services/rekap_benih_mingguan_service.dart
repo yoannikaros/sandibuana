@@ -46,12 +46,12 @@ class RekapBenihMingguanService {
     }
   }
 
-  // Read - Ambil rekap benih mingguan berdasarkan jenis benih
-  Future<List<RekapBenihMingguanModel>> getRekapBenihMingguanByJenis(String jenisBenih) async {
+  // Read - Ambil rekap benih mingguan berdasarkan catatan pembenihan
+  Future<List<RekapBenihMingguanModel>> getRekapBenihMingguanByPembenihan(String idPembenihan) async {
     try {
       final querySnapshot = await _firestore
           .collection(_collection)
-          .where('jenis_benih', isEqualTo: jenisBenih)
+          .where('id_pembenihan', isEqualTo: idPembenihan)
           .orderBy('tanggal_mulai', descending: true)
           .get();
       
@@ -59,7 +59,7 @@ class RekapBenihMingguanService {
           .map((doc) => RekapBenihMingguanModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
-      throw Exception('Gagal mengambil rekap benih mingguan berdasarkan jenis: $e');
+      throw Exception('Gagal mengambil rekap benih mingguan berdasarkan pembenihan: $e');
     }
   }
 
@@ -160,14 +160,14 @@ class RekapBenihMingguanService {
 
   // Stream - Real-time data rekap benih mingguan berdasarkan filter
   Stream<List<RekapBenihMingguanModel>> streamRekapBenihMingguanByFilter({
-    String? jenisBenih,
+    String? idPembenihan,
     DateTime? startDate,
     DateTime? endDate,
   }) {
     Query query = _firestore.collection(_collection);
     
-    if (jenisBenih != null) {
-      query = query.where('jenis_benih', isEqualTo: jenisBenih);
+    if (idPembenihan != null) {
+      query = query.where('id_pembenihan', isEqualTo: idPembenihan);
     }
     
     if (startDate != null) {
@@ -199,8 +199,8 @@ class RekapBenihMingguanService {
           'total_rekap': 0,
           'total_nampan': 0,
           'rata_rata_nampan': 0.0,
-          'jenis_terpopuler': '',
-          'distribusi_jenis': <String, int>{},
+          'pembenihan_terpopuler': '',
+          'distribusi_pembenihan': <String, int>{},
         };
       }
 
@@ -208,20 +208,22 @@ class RekapBenihMingguanService {
       final totalNampan = rekaps.fold<int>(0, (sum, rekap) => sum + rekap.jumlahNampan);
       final rataRataNampan = totalNampan / totalRekap;
 
-      // Distribusi per jenis benih
-      final distribusiJenis = <String, int>{};
+      // Distribusi per catatan pembenihan
+      final distribusiPembenihan = <String, int>{};
       for (final rekap in rekaps) {
-        distribusiJenis[rekap.jenisBenih] = 
-            (distribusiJenis[rekap.jenisBenih] ?? 0) + rekap.jumlahNampan;
+        if (rekap.idPembenihan != null) {
+          distribusiPembenihan[rekap.idPembenihan!] = 
+              (distribusiPembenihan[rekap.idPembenihan!] ?? 0) + rekap.jumlahNampan;
+        }
       }
 
-      // Jenis terpopuler
-      String jenisTerpopuler = '';
+      // Pembenihan terpopuler
+      String pembenihanTerpopuler = '';
       int maxNampan = 0;
-      distribusiJenis.forEach((jenis, jumlah) {
+      distribusiPembenihan.forEach((idPembenihan, jumlah) {
         if (jumlah > maxNampan) {
           maxNampan = jumlah;
-          jenisTerpopuler = jenis;
+          pembenihanTerpopuler = idPembenihan;
         }
       });
 
@@ -229,8 +231,8 @@ class RekapBenihMingguanService {
         'total_rekap': totalRekap,
         'total_nampan': totalNampan,
         'rata_rata_nampan': rataRataNampan,
-        'jenis_terpopuler': jenisTerpopuler,
-        'distribusi_jenis': distribusiJenis,
+        'pembenihan_terpopuler': pembenihanTerpopuler,
+        'distribusi_pembenihan': distribusiPembenihan,
       };
     } catch (e) {
       throw Exception('Gagal mengambil statistik rekap benih mingguan: $e');
@@ -248,8 +250,8 @@ class RekapBenihMingguanService {
           'total_rekap': 0,
           'total_nampan': 0,
           'rata_rata_nampan': 0.0,
-          'jenis_terpopuler': '',
-          'distribusi_jenis': <String, int>{},
+          'pembenihan_terpopuler': '',
+          'distribusi_pembenihan': <String, int>{},
         };
       }
 
@@ -257,20 +259,22 @@ class RekapBenihMingguanService {
       final totalNampan = rekaps.fold<int>(0, (sum, rekap) => sum + rekap.jumlahNampan);
       final rataRataNampan = totalNampan / totalRekap;
 
-      // Distribusi per jenis benih
-      final distribusiJenis = <String, int>{};
+      // Distribusi per catatan pembenihan
+      final distribusiPembenihan = <String, int>{};
       for (final rekap in rekaps) {
-        distribusiJenis[rekap.jenisBenih] = 
-            (distribusiJenis[rekap.jenisBenih] ?? 0) + rekap.jumlahNampan;
+        if (rekap.idPembenihan != null) {
+          distribusiPembenihan[rekap.idPembenihan!] = 
+              (distribusiPembenihan[rekap.idPembenihan!] ?? 0) + rekap.jumlahNampan;
+        }
       }
 
-      // Jenis terpopuler
-      String jenisTerpopuler = '';
+      // Pembenihan terpopuler
+      String pembenihanTerpopuler = '';
       int maxNampan = 0;
-      distribusiJenis.forEach((jenis, jumlah) {
+      distribusiPembenihan.forEach((idPembenihan, jumlah) {
         if (jumlah > maxNampan) {
           maxNampan = jumlah;
-          jenisTerpopuler = jenis;
+          pembenihanTerpopuler = idPembenihan;
         }
       });
 
@@ -278,8 +282,8 @@ class RekapBenihMingguanService {
         'total_rekap': totalRekap,
         'total_nampan': totalNampan,
         'rata_rata_nampan': rataRataNampan,
-        'jenis_terpopuler': jenisTerpopuler,
-        'distribusi_jenis': distribusiJenis,
+        'pembenihan_terpopuler': pembenihanTerpopuler,
+        'distribusi_pembenihan': distribusiPembenihan,
       };
     } catch (e) {
       throw Exception('Gagal mengambil statistik rekap benih mingguan berdasarkan periode: $e');

@@ -42,12 +42,12 @@ class MonitoringNutrisiService {
     }
   }
 
-  // Get monitoring by tandon
-  Future<List<MonitoringNutrisiModel>> getMonitoringByTandon(String tandonId) async {
+  // Get monitoring by pembenihan
+  Future<List<MonitoringNutrisiModel>> getMonitoringByPembenihan(String pembenihanId) async {
     try {
       final querySnapshot = await _firestore
           .collection(_collection)
-          .where('id_tandon', isEqualTo: tandonId)
+          .where('id_pembenihan', isEqualTo: pembenihanId)
           .orderBy('tanggal_monitoring', descending: true)
           .get();
 
@@ -55,7 +55,24 @@ class MonitoringNutrisiService {
           .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
           .toList();
     } catch (e) {
-      throw Exception('Gagal mengambil monitoring berdasarkan tandon: $e');
+      throw Exception('Gagal mengambil monitoring berdasarkan pembenihan: $e');
+    }
+  }
+
+  // Get monitoring by penanaman
+  Future<List<MonitoringNutrisiModel>> getMonitoringByPenanaman(String penanamanId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_collection)
+          .where('id_penanaman', isEqualTo: penanamanId)
+          .orderBy('tanggal_monitoring', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      throw Exception('Gagal mengambil monitoring berdasarkan penanaman: $e');
     }
   }
 
@@ -95,9 +112,25 @@ class MonitoringNutrisiService {
   }
 
   // Add new monitoring
-  Future<String> addMonitoring(MonitoringNutrisiModel monitoring) async {
+  Future<bool> addMonitoring(MonitoringNutrisiModel monitoring) async {
     try {
-      final docRef = await _firestore.collection(_collection).add(monitoring.toFirestore());
+      await _firestore.collection(_collection).add(monitoring.toFirestore());
+      return true;
+    } catch (e) {
+      throw Exception('Gagal menambah monitoring: $e');
+    }
+  }
+
+  // Add new monitoring with auto-filled user (legacy method)
+  Future<String> addMonitoringWithUser(MonitoringNutrisiModel monitoring, String currentUserId) async {
+    try {
+      // Auto-fill dicatatOleh with current user
+      final monitoringWithUser = monitoring.copyWith(
+        dicatatOleh: currentUserId,
+        dicatatPada: DateTime.now(),
+      );
+      
+      final docRef = await _firestore.collection(_collection).add(monitoringWithUser.toFirestore());
       return docRef.id;
     } catch (e) {
       throw Exception('Gagal menambah monitoring: $e');
@@ -183,8 +216,8 @@ class MonitoringNutrisiService {
     }
   }
 
-  // Get monitoring count by tandon
-  Future<Map<String, int>> getMonitoringCountByTandon(DateTime? startDate, DateTime? endDate) async {
+  // Get monitoring count by pembenihan
+  Future<Map<String, int>> getMonitoringCountByPembenihan(DateTime? startDate, DateTime? endDate) async {
     try {
       Query query = _firestore.collection(_collection);
 
@@ -199,19 +232,50 @@ class MonitoringNutrisiService {
           .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
           .toList();
 
-      final countByTandon = <String, int>{};
+      final countByPembenihan = <String, int>{};
       for (final monitoring in monitoringList) {
-        countByTandon[monitoring.idTandon] = (countByTandon[monitoring.idTandon] ?? 0) + 1;
+        if (monitoring.idPembenihan != null) {
+          countByPembenihan[monitoring.idPembenihan!] = (countByPembenihan[monitoring.idPembenihan!] ?? 0) + 1;
+        }
       }
 
-      return countByTandon;
+      return countByPembenihan;
     } catch (e) {
-      throw Exception('Gagal mengambil jumlah monitoring per tandon: $e');
+      throw Exception('Gagal mengambil jumlah monitoring per pembenihan: $e');
     }
   }
 
-  // Get average values by tandon
-  Future<Map<String, Map<String, double>>> getAverageValuesByTandon(
+  // Get monitoring count by penanaman
+  Future<Map<String, int>> getMonitoringCountByPenanaman(DateTime? startDate, DateTime? endDate) async {
+    try {
+      Query query = _firestore.collection(_collection);
+
+      if (startDate != null && endDate != null) {
+        query = query
+            .where('tanggal_monitoring', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+            .where('tanggal_monitoring', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+
+      final querySnapshot = await query.get();
+      final monitoringList = querySnapshot.docs
+          .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
+          .toList();
+
+      final countByPenanaman = <String, int>{};
+      for (final monitoring in monitoringList) {
+        if (monitoring.idPenanaman != null) {
+          countByPenanaman[monitoring.idPenanaman!] = (countByPenanaman[monitoring.idPenanaman!] ?? 0) + 1;
+        }
+      }
+
+      return countByPenanaman;
+    } catch (e) {
+      throw Exception('Gagal mengambil jumlah monitoring per penanaman: $e');
+    }
+  }
+
+  // Get average values by pembenihan
+  Future<Map<String, Map<String, double>>> getAverageValuesByPembenihan(
     DateTime? startDate,
     DateTime? endDate,
   ) async {
@@ -229,19 +293,21 @@ class MonitoringNutrisiService {
           .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
           .toList();
 
-      final groupedByTandon = <String, List<MonitoringNutrisiModel>>{};
+      final groupedByPembenihan = <String, List<MonitoringNutrisiModel>>{};
       for (final monitoring in monitoringList) {
-        groupedByTandon.putIfAbsent(monitoring.idTandon, () => []).add(monitoring);
+        if (monitoring.idPembenihan != null) {
+          groupedByPembenihan.putIfAbsent(monitoring.idPembenihan!, () => []).add(monitoring);
+        }
       }
 
-      final averagesByTandon = <String, Map<String, double>>{};
-      groupedByTandon.forEach((tandonId, monitoringList) {
+      final averagesByPembenihan = <String, Map<String, double>>{};
+      groupedByPembenihan.forEach((pembenihanId, monitoringList) {
         if (monitoringList.isNotEmpty) {
           final avgPpm = monitoringList.fold<double>(0, (sum, m) => sum + (m.nilaiPpm ?? 0)) / monitoringList.length;
           final avgPh = monitoringList.fold<double>(0, (sum, m) => sum + (m.tingkatPh ?? 0)) / monitoringList.length;
           final avgTemp = monitoringList.fold<double>(0, (sum, m) => sum + (m.suhuAir ?? 0)) / monitoringList.length;
 
-          averagesByTandon[tandonId] = {
+          averagesByPembenihan[pembenihanId] = {
             'averagePpm': avgPpm,
             'averagePh': avgPh,
             'averageTemp': avgTemp,
@@ -249,14 +315,61 @@ class MonitoringNutrisiService {
         }
       });
 
-      return averagesByTandon;
+      return averagesByPembenihan;
     } catch (e) {
-      throw Exception('Gagal mengambil rata-rata nilai per tandon: $e');
+      throw Exception('Gagal mengambil rata-rata nilai per pembenihan: $e');
     }
   }
 
-  // Get latest monitoring for each tandon
-  Future<Map<String, MonitoringNutrisiModel>> getLatestMonitoringByTandon() async {
+  // Get average values by penanaman
+  Future<Map<String, Map<String, double>>> getAverageValuesByPenanaman(
+    DateTime? startDate,
+    DateTime? endDate,
+  ) async {
+    try {
+      Query query = _firestore.collection(_collection);
+
+      if (startDate != null && endDate != null) {
+        query = query
+            .where('tanggal_monitoring', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+            .where('tanggal_monitoring', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+
+      final querySnapshot = await query.get();
+      final monitoringList = querySnapshot.docs
+          .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
+          .toList();
+
+      final groupedByPenanaman = <String, List<MonitoringNutrisiModel>>{};
+      for (final monitoring in monitoringList) {
+        if (monitoring.idPenanaman != null) {
+          groupedByPenanaman.putIfAbsent(monitoring.idPenanaman!, () => []).add(monitoring);
+        }
+      }
+
+      final averagesByPenanaman = <String, Map<String, double>>{};
+      groupedByPenanaman.forEach((penanamanId, monitoringList) {
+        if (monitoringList.isNotEmpty) {
+          final avgPpm = monitoringList.fold<double>(0, (sum, m) => sum + (m.nilaiPpm ?? 0)) / monitoringList.length;
+          final avgPh = monitoringList.fold<double>(0, (sum, m) => sum + (m.tingkatPh ?? 0)) / monitoringList.length;
+          final avgTemp = monitoringList.fold<double>(0, (sum, m) => sum + (m.suhuAir ?? 0)) / monitoringList.length;
+
+          averagesByPenanaman[penanamanId] = {
+            'averagePpm': avgPpm,
+            'averagePh': avgPh,
+            'averageTemp': avgTemp,
+          };
+        }
+      });
+
+      return averagesByPenanaman;
+    } catch (e) {
+      throw Exception('Gagal mengambil rata-rata nilai per penanaman: $e');
+    }
+  }
+
+  // Get latest monitoring for each pembenihan
+  Future<Map<String, MonitoringNutrisiModel>> getLatestMonitoringByPembenihan() async {
     try {
       final querySnapshot = await _firestore
           .collection(_collection)
@@ -267,16 +380,41 @@ class MonitoringNutrisiService {
           .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
           .toList();
 
-      final latestByTandon = <String, MonitoringNutrisiModel>{};
+      final latestByPembenihan = <String, MonitoringNutrisiModel>{};
       for (final monitoring in monitoringList) {
-        if (!latestByTandon.containsKey(monitoring.idTandon)) {
-          latestByTandon[monitoring.idTandon] = monitoring;
+        if (monitoring.idPembenihan != null && !latestByPembenihan.containsKey(monitoring.idPembenihan!)) {
+          latestByPembenihan[monitoring.idPembenihan!] = monitoring;
         }
       }
 
-      return latestByTandon;
+      return latestByPembenihan;
     } catch (e) {
-      throw Exception('Gagal mengambil monitoring terbaru per tandon: $e');
+      throw Exception('Gagal mengambil monitoring terbaru per pembenihan: $e');
+    }
+  }
+
+  // Get latest monitoring for each penanaman
+  Future<Map<String, MonitoringNutrisiModel>> getLatestMonitoringByPenanaman() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_collection)
+          .orderBy('tanggal_monitoring', descending: true)
+          .get();
+
+      final monitoringList = querySnapshot.docs
+          .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
+          .toList();
+
+      final latestByPenanaman = <String, MonitoringNutrisiModel>{};
+      for (final monitoring in monitoringList) {
+        if (monitoring.idPenanaman != null && !latestByPenanaman.containsKey(monitoring.idPenanaman!)) {
+          latestByPenanaman[monitoring.idPenanaman!] = monitoring;
+        }
+      }
+
+      return latestByPenanaman;
+    } catch (e) {
+      throw Exception('Gagal mengambil monitoring terbaru per penanaman: $e');
     }
   }
 
@@ -291,11 +429,23 @@ class MonitoringNutrisiService {
             .toList());
   }
 
-  // Real-time monitoring stream by tandon
-  Stream<List<MonitoringNutrisiModel>> getMonitoringStreamByTandon(String tandonId) {
+  // Real-time monitoring stream by pembenihan
+  Stream<List<MonitoringNutrisiModel>> getMonitoringStreamByPembenihan(String pembenihanId) {
     return _firestore
         .collection(_collection)
-        .where('id_tandon', isEqualTo: tandonId)
+        .where('id_pembenihan', isEqualTo: pembenihanId)
+        .orderBy('tanggal_monitoring', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
+            .toList());
+  }
+
+  // Real-time monitoring stream by penanaman
+  Stream<List<MonitoringNutrisiModel>> getMonitoringStreamByPenanaman(String penanamanId) {
+    return _firestore
+        .collection(_collection)
+        .where('id_penanaman', isEqualTo: penanamanId)
         .orderBy('tanggal_monitoring', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs

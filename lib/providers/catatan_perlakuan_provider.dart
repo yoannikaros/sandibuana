@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import '../models/catatan_perlakuan_model.dart';
 import '../services/catatan_perlakuan_service.dart';
+import '../services/dropdown_service.dart';
+import '../models/dropdown_option_model.dart';
+import '../models/penanaman_sayur_model.dart';
+import '../services/penanaman_sayur_service.dart';
 import 'auth_provider.dart';
 
 class CatatanPerlakuanProvider with ChangeNotifier {
   final CatatanPerlakuanService _service = CatatanPerlakuanService();
+  final DropdownService _dropdownService = DropdownService();
+  final PenanamanSayurService _penanamanSayurService = PenanamanSayurService();
   final AuthProvider _authProvider;
 
   CatatanPerlakuanProvider(this._authProvider);
@@ -15,11 +21,19 @@ class CatatanPerlakuanProvider with ChangeNotifier {
   String? _error;
   String _searchQuery = '';
   String _selectedJenis = 'Semua';
-  String _selectedArea = 'Semua';
+  // Removed _selectedArea - no longer needed
   int? _selectedRating;
   DateTime? _selectedDate;
   DateTime? _startDate;
   DateTime? _endDate;
+
+  // Dropdown options from SQLite
+  List<DropdownOptionModel> _jenisPerlakuanOptions = [];
+  // Removed _areaTanamanOptions - no longer needed
+  List<DropdownOptionModel> _metodeOptions = [];
+  
+  // Penanaman Sayur data from Firebase
+  List<PenanamanSayurModel> _penanamanSayurList = [];
 
   // Getters
   List<CatatanPerlakuanModel> get catatanPerlakuan => _filteredCatatanPerlakuan;
@@ -27,11 +41,45 @@ class CatatanPerlakuanProvider with ChangeNotifier {
   String? get error => _error;
   String get searchQuery => _searchQuery;
   String get selectedJenis => _selectedJenis;
-  String get selectedArea => _selectedArea;
+  // Removed selectedArea getter - no longer needed
   int? get selectedRating => _selectedRating;
   DateTime? get selectedDate => _selectedDate;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
+
+  // Dropdown options getters
+  List<DropdownOptionModel> get jenisPerlakuanOptions => _jenisPerlakuanOptions;
+  // Removed areaTanamanOptions getter - no longer needed
+  List<DropdownOptionModel> get metodeOptions => _metodeOptions;
+  
+  // Penanaman Sayur getters
+  List<PenanamanSayurModel> get penanamanSayurList => _penanamanSayurList;
+
+  // Get dropdown values as strings for compatibility
+  List<String> get jenisPerlakuanValues => _jenisPerlakuanOptions.map((e) => e.value).toList();
+  List<String> get metodeValues => _metodeOptions.map((e) => e.value).toList();
+
+  // Load dropdown options from SQLite
+  Future<void> loadDropdownOptions() async {
+    try {
+      _jenisPerlakuanOptions = await _dropdownService.getOptions(DropdownCategories.jenisPerlakuan);
+      // Removed areaTanamanOptions - no longer needed
+      _metodeOptions = await _dropdownService.getOptions(DropdownCategories.metode);
+      notifyListeners();
+    } catch (e) {
+      _setError('Error loading dropdown options: ${e.toString()}');
+    }
+  }
+  
+  // Load penanaman sayur data from Firebase
+  Future<void> loadPenanamanSayurData() async {
+    try {
+      _penanamanSayurList = await _penanamanSayurService.getAllPenanamanSayur();
+      notifyListeners();
+    } catch (e) {
+      _setError('Error loading penanaman sayur data: ${e.toString()}');
+    }
+  }
 
   // Load semua catatan perlakuan
   Future<void> loadCatatanPerlakuan() async {
@@ -39,6 +87,10 @@ class CatatanPerlakuanProvider with ChangeNotifier {
     _setError(null);
 
     try {
+      // Load dropdown options and penanaman sayur data first
+      await loadDropdownOptions();
+      await loadPenanamanSayurData();
+      
       _catatanPerlakuan = await _service.getAllCatatanPerlakuan();
       _applyFilters();
     } catch (e) {
@@ -86,8 +138,8 @@ class CatatanPerlakuanProvider with ChangeNotifier {
     required DateTime tanggalPerlakuan,
     String? idJadwal,
     required String jenisPerlakuan,
-    String? areaTanaman,
-    String? bahanDigunakan,
+    String? idPenanaman,
+    String? idPembenihan,
     double? jumlahDigunakan,
     String? satuan,
     String? metode,
@@ -108,8 +160,8 @@ class CatatanPerlakuanProvider with ChangeNotifier {
         tanggalPerlakuan: tanggalPerlakuan,
         idJadwal: idJadwal,
         jenisPerlakuan: jenisPerlakuan,
-        areaTanaman: areaTanaman,
-        bahanDigunakan: bahanDigunakan,
+        idPenanaman: idPenanaman,
+        idPembenihan: idPembenihan,
         jumlahDigunakan: jumlahDigunakan,
         satuan: satuan,
         metode: metode,
@@ -117,6 +169,7 @@ class CatatanPerlakuanProvider with ChangeNotifier {
         ratingEfektivitas: ratingEfektivitas,
         catatan: catatan,
         dicatatOleh: _authProvider.user!.idPengguna!,
+        namaUser: _authProvider.user!.namaLengkap ?? 'Unknown',
       );
 
       await loadCatatanPerlakuan();
@@ -130,15 +183,37 @@ class CatatanPerlakuanProvider with ChangeNotifier {
   }
 
   // Update catatan perlakuan
-  Future<bool> updateCatatanPerlakuan(
-    String idPerlakuan,
-    Map<String, dynamic> updateData,
-  ) async {
+  Future<bool> updateCatatanPerlakuan(String idPerlakuan, {
+    required DateTime tanggalPerlakuan,
+    required String jenisPerlakuan,
+    String? idPenanaman,
+    String? idPembenihan,
+    required String namaUser,
+    double? jumlahDigunakan,
+    String? satuan,
+    String? metode,
+    String? kondisiCuaca,
+    int? ratingEfektivitas,
+    String? catatan,
+  }) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      await _service.updateCatatanPerlakuan(idPerlakuan, updateData);
+      await _service.updateCatatanPerlakuan(
+        idPerlakuan,
+        tanggalPerlakuan: tanggalPerlakuan,
+        jenisPerlakuan: jenisPerlakuan,
+        idPenanaman: idPenanaman,
+        idPembenihan: idPembenihan,
+        namaUser: namaUser,
+        jumlahDigunakan: jumlahDigunakan,
+        satuan: satuan,
+        metode: metode,
+        kondisiCuaca: kondisiCuaca,
+        ratingEfektivitas: ratingEfektivitas,
+        catatan: catatan,
+      );
       await loadCatatanPerlakuan();
       return true;
     } catch (e) {
@@ -180,12 +255,7 @@ class CatatanPerlakuanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Set filter area tanaman
-  void setAreaFilter(String area) {
-    _selectedArea = area;
-    _applyFilters();
-    notifyListeners();
-  }
+  // Removed setAreaFilter - no longer needed
 
   // Set filter rating
   void setRatingFilter(int? rating) {
@@ -198,7 +268,6 @@ class CatatanPerlakuanProvider with ChangeNotifier {
   void clearFilters() {
     _searchQuery = '';
     _selectedJenis = 'Semua';
-    _selectedArea = 'Semua';
     _selectedRating = null;
     _selectedDate = null;
     _startDate = null;
@@ -214,19 +283,14 @@ class CatatanPerlakuanProvider with ChangeNotifier {
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
         final matchesSearch = perlakuan.jenisPerlakuan.toLowerCase().contains(query) ||
-            (perlakuan.areaTanaman?.toLowerCase().contains(query) ?? false) ||
-            (perlakuan.bahanDigunakan?.toLowerCase().contains(query) ?? false) ||
-            (perlakuan.catatan?.toLowerCase().contains(query) ?? false);
+            (perlakuan.namaUser?.toLowerCase().contains(query) ?? false) ||
+            (perlakuan.catatan?.toLowerCase().contains(query) ?? false) ||
+            (perlakuan.displayRelasi.toLowerCase().contains(query));
         if (!matchesSearch) return false;
       }
 
       // Jenis perlakuan filter
       if (_selectedJenis != 'Semua' && perlakuan.jenisPerlakuan != _selectedJenis) {
-        return false;
-      }
-
-      // Area tanaman filter
-      if (_selectedArea != 'Semua' && perlakuan.areaTanaman != _selectedArea) {
         return false;
       }
 
@@ -249,9 +313,9 @@ class CatatanPerlakuanProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getStatistikByArea() async {
+  Future<Map<String, dynamic>> getStatistikByRelasi() async {
     try {
-      return await _service.getStatistikByArea();
+      return await _service.getStatistikByRelasi();
     } catch (e) {
       _setError(e.toString());
       return {};
@@ -276,20 +340,23 @@ class CatatanPerlakuanProvider with ChangeNotifier {
     }
   }
 
-  // Get unique values untuk filter
+  // Get unique values untuk filter (using SQLite data)
   List<String> getUniqueJenisPerlakuan() {
-    final jenisSet = _catatanPerlakuan.map((p) => p.jenisPerlakuan).toSet();
-    final jenisList = jenisSet.toList()..sort();
-    return ['Semua', ...jenisList];
+    final activeOptions = _jenisPerlakuanOptions
+        .where((option) => option.isActive)
+        .map((option) => option.value)
+        .toList()..sort();
+    return ['Semua', ...activeOptions];
   }
 
-  List<String> getUniqueAreaTanaman() {
-    final areaSet = _catatanPerlakuan
-        .where((p) => p.areaTanaman != null && p.areaTanaman!.isNotEmpty)
-        .map((p) => p.areaTanaman!)
-        .toSet();
-    final areaList = areaSet.toList()..sort();
-    return ['Semua', ...areaList];
+  // Removed getUniqueAreaTanaman - no longer needed
+
+  List<String> getUniqueMetode() {
+    final activeOptions = _metodeOptions
+        .where((option) => option.isActive)
+        .map((option) => option.value)
+        .toList()..sort();
+    return activeOptions;
   }
 
   List<int> getUniqueRatings() {

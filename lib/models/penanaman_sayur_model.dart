@@ -88,6 +88,45 @@ class PenanamanSayurModel {
     };
   }
 
+  // Formatted display methods
+  String get formattedTanggalTanam {
+    return '${tanggalTanam.day.toString().padLeft(2, '0')}/${tanggalTanam.month.toString().padLeft(2, '0')}/${tanggalTanam.year}';
+  }
+
+  String get formattedTanggalPanen {
+    if (tanggalPanen == null) return '-';
+    return '${tanggalPanen!.day.toString().padLeft(2, '0')}/${tanggalPanen!.month.toString().padLeft(2, '0')}/${tanggalPanen!.year}';
+  }
+
+  String get displayTahapPertumbuhan {
+    switch (tahapPertumbuhan) {
+      case 'semai':
+        return 'Semai';
+      case 'vegetatif':
+        return 'Vegetatif';
+      case 'siap_panen':
+        return 'Siap Panen';
+      case 'panen':
+        return 'Panen';
+      case 'gagal':
+        return 'Gagal';
+      default:
+        return tahapPertumbuhan;
+    }
+  }
+
+  String get displayLokasi {
+    return lokasi?.isNotEmpty == true ? lokasi! : 'Tidak Ditentukan';
+  }
+
+  String get displayCatatan {
+    return catatan?.isNotEmpty == true ? catatan! : 'Tidak ada catatan';
+  }
+
+  String get displayAlasanGagal {
+    return alasanGagal?.isNotEmpty == true ? alasanGagal! : 'Tidak ada alasan';
+  }
+
   // Copy with method for updates
   PenanamanSayurModel copyWith({
     String? idPenanaman,
