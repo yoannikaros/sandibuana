@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "510862330600",
+    "firebase_url": "https://gudangku-dc355-default-rtdb.firebaseio.com",
+    "project_id": "gudangku-dc355",
+    "storage_bucket": "gudangku-dc355.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:510862330600:android:baf10c73a615cbd6db575d",
+        "android_client_info": {
+          "package_name": "com.sbapp.sandibuana"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwmLVbMynKdJB8h2jfbUXEwTBMOSl_t_I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

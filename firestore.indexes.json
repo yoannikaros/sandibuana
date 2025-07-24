@@ -1,0 +1,295 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "jadwal_pemupukan_bulanan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bulan_tahun",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "minggu_ke",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hari_dalam_minggu",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "jadwal_pemupukan_bulanan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bulan_tahun",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "minggu_ke",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hari_dalam_minggu",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "jadwal_pemupukan_bulanan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sudah_selesai",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bulan_tahun",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "minggu_ke",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hari_dalam_minggu",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "jadwal_pemupukan_bulanan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sudah_selesai",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bulan_tahun",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "minggu_ke",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hari_dalam_minggu",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "catatan_perlakuan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tanggal_perlakuan",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "dicatat_pada",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "catatan_perlakuan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tanggal_perlakuan",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dicatat_pada",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "catatan_perlakuan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "jenis_perlakuan",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_perlakuan",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "catatan_perlakuan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "area_tanaman",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_perlakuan",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "catatan_perlakuan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "rating_efektivitas",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_perlakuan",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "catatan_perlakuan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id_jadwal",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_perlakuan",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penjualan_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tanggal_jual",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "dicatat_pada",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penjualan_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tanggal_jual",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dicatat_pada",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penjualan_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id_pelanggan",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_jual",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penjualan_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "jenis_sayur",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_jual",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penjualan_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status_kirim",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_jual",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penanaman_sayur",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "jenis_sayur",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_tanam",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penanaman_sayur",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tahap_pertumbuhan",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_tanam",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penanaman_sayur",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lokasi",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_tanam",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "penanaman_sayur",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id_pembenihan",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_tanam",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
