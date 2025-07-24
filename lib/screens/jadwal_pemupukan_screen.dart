@@ -498,6 +498,35 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                         ),
                       ],
                     ),
+                    Consumer<JadwalPemupukanProvider>(
+                      builder: (context, provider, child) {
+                        if (jadwal.idPembenihan != null) {
+                          final namaPembenihan = provider.getCatatanPembenihanName(jadwal.idPembenihan!);
+                          return Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.eco, size: 16, color: Colors.teal[700]),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Pembenihan: ${namaPembenihan ?? 'Data tidak ditemukan'}',
+                                      style: TextStyle(
+                                        color: Colors.teal[700],
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     if (jadwal.perlakuanTambahan != null) ...[
                       const SizedBox(height: 8),
                       Row(
@@ -646,6 +675,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
     int selectedMinggu = jadwal?.mingguKe ?? 1;
     int selectedHari = jadwal?.hariDalamMinggu ?? 1;
     String selectedPerlakuan = jadwal?.perlakuanPupuk ?? '';
+    String? selectedPembenihan = jadwal?.idPembenihan;
     String perlakuanTambahan = jadwal?.perlakuanTambahan ?? '';
     String catatan = jadwal?.catatan ?? '';
 
@@ -779,6 +809,40 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                   ),
                   const SizedBox(height: 16),
                   
+                  // Pembenihan Terkait
+                  Consumer<JadwalPemupukanProvider>(
+                    builder: (context, provider, child) {
+                      final activePembenihan = provider.getActiveCatatanPembenihan();
+                      
+                      return DropdownButtonFormField<String>(
+                        value: selectedPembenihan,
+                        decoration: const InputDecoration(
+                          labelText: 'Pembenihan Terkait (Opsional)',
+                          border: OutlineInputBorder(),
+                          hintText: 'Pilih pembenihan yang akan dipupuk',
+                        ),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Tidak terkait dengan pembenihan'),
+                          ),
+                          ...activePembenihan.map((pembenihan) =>
+                            DropdownMenuItem<String>(
+                              value: pembenihan.idPembenihan,
+                              child: Text('${pembenihan.kodeBatch} - ${pembenihan.status}'),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedPembenihan = value;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
                   // Perlakuan Tambahan
                   TextFormField(
                     initialValue: perlakuanTambahan,
@@ -822,6 +886,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                         'minggu_ke': selectedMinggu,
                         'hari_dalam_minggu': selectedHari,
                         'perlakuan_pupuk': selectedPerlakuan,
+                        'id_pembenihan': selectedPembenihan,
                         'perlakuan_tambahan': perlakuanTambahan.isEmpty ? null : perlakuanTambahan,
                         'catatan': catatan.isEmpty ? null : catatan,
                       },
@@ -832,6 +897,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                       mingguKe: selectedMinggu,
                       hariDalamMinggu: selectedHari,
                       perlakuanPupuk: selectedPerlakuan,
+                      idPembenihan: selectedPembenihan,
                       perlakuanTambahan: perlakuanTambahan.isEmpty ? null : perlakuanTambahan,
                       catatan: catatan.isEmpty ? null : catatan,
                     );
@@ -878,6 +944,15 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
               _buildDetailRow('Hari', JadwalPemupukanModel.getNamaHari(jadwal.hariDalamMinggu)),
               _buildDetailRow('Tanggal Target', DateFormat('dd MMMM yyyy', 'id_ID').format(jadwal.getTanggalTarget())),
               _buildDetailRow('Perlakuan Pupuk', jadwal.perlakuanPupuk),
+              Consumer<JadwalPemupukanProvider>(
+                builder: (context, provider, child) {
+                  if (jadwal.idPembenihan != null) {
+                    final namaPembenihan = provider.getCatatanPembenihanName(jadwal.idPembenihan!);
+                    return _buildDetailRow('Pembenihan Terkait', namaPembenihan ?? 'Data tidak ditemukan');
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               if (jadwal.perlakuanTambahan != null)
                 _buildDetailRow('Perlakuan Tambahan', jadwal.perlakuanTambahan!),
               if (jadwal.catatan != null)

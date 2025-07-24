@@ -16,7 +16,7 @@ class CartService {
     String path = join(await getDatabasesPath(), 'cart.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createTable,
     );
   }

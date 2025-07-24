@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import '../models/jadwal_pemupukan_model.dart';
+import '../models/catatan_pembenihan_model.dart';
 import '../services/jadwal_pemupukan_service.dart';
+import '../services/benih_service.dart';
 import '../providers/auth_provider.dart';
 
 class JadwalPemupukanProvider with ChangeNotifier {
   final JadwalPemupukanService _service = JadwalPemupukanService();
+  final BenihService _benihService = BenihService();
   final AuthProvider _authProvider;
 
   JadwalPemupukanProvider(this._authProvider);
 
   List<JadwalPemupukanModel> _jadwalList = [];
   List<JadwalPemupukanModel> _filteredJadwalList = [];
+  List<CatatanPembenihanModel> _catatanPembenihanList = [];
   bool _isLoading = false;
   String? _error;
   DateTime _selectedMonth = DateTime.now();
@@ -22,6 +26,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
 
   // Getters
   List<JadwalPemupukanModel> get jadwalList => _filteredJadwalList;
+  List<CatatanPembenihanModel> get catatanPembenihanList => _catatanPembenihanList;
   bool get isLoading => _isLoading;
   String? get error => _error;
   DateTime get selectedMonth => _selectedMonth;
@@ -52,6 +57,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
     try {
       _selectedMonth = bulanTahun;
       _jadwalList = await _service.getJadwalPemupukanByBulan(bulanTahun);
+      await _loadCatatanPembenihan();
       _applyFilters();
       await _loadStatistik();
       _clearError();
@@ -70,6 +76,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
     required String perlakuanPupuk,
     String? perlakuanTambahan,
     String? catatan,
+    String? idPembenihan,
   }) async {
     try {
       final userId = _authProvider.user?.idPengguna;
@@ -84,6 +91,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
         perlakuanPupuk: perlakuanPupuk,
         perlakuanTambahan: perlakuanTambahan,
         catatan: catatan,
+        idPembenihan: idPembenihan,
         dibuatOleh: userId,
       );
 
@@ -387,6 +395,39 @@ class JadwalPemupukanProvider with ChangeNotifier {
               'value': minggu,
               'label': 'Minggu ke-$minggu',
             })
+        .toList();
+  }
+
+  // Load catatan pembenihan
+  Future<void> _loadCatatanPembenihan() async {
+    try {
+      _catatanPembenihanList = await _benihService.getAllCatatanPembenihan();
+    } catch (e) {
+      // Jika gagal load catatan pembenihan, set list kosong
+      _catatanPembenihanList = [];
+    }
+  }
+
+  // Get catatan pembenihan name by ID
+  String getCatatanPembenihanName(String? idPembenihan) {
+    if (idPembenihan == null || idPembenihan.isEmpty) {
+      return 'Tidak terkait';
+    }
+    
+    try {
+      final catatan = _catatanPembenihanList.firstWhere(
+        (catatan) => catatan.idPembenihan == idPembenihan,
+      );
+      return '${catatan.kodeBatch} - ${catatan.status}';
+    } catch (e) {
+      return 'Pembenihan tidak ditemukan';
+    }
+  }
+
+  // Get active catatan pembenihan (status berjalan)
+  List<CatatanPembenihanModel> getActiveCatatanPembenihan() {
+    return _catatanPembenihanList
+        .where((catatan) => catatan.status == 'berjalan')
         .toList();
   }
 

@@ -13,6 +13,7 @@ class JadwalPemupukanService {
     required String perlakuanPupuk,
     String? perlakuanTambahan,
     String? catatan,
+    String? idPembenihan,
     required String dibuatOleh,
   }) async {
     try {
@@ -36,6 +37,7 @@ class JadwalPemupukanService {
         perlakuanPupuk: perlakuanPupuk,
         perlakuanTambahan: perlakuanTambahan,
         catatan: catatan,
+        idPembenihan: idPembenihan,
         dibuatOleh: dibuatOleh,
         dibuatPada: DateTime.now(),
       );

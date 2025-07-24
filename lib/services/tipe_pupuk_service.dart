@@ -16,7 +16,7 @@ class TipePupukService {
     String path = join(await getDatabasesPath(), 'tipe_pupuk.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createTable,
     );
   }

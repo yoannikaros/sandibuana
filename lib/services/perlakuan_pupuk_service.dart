@@ -19,7 +19,7 @@ class PerlakuanPupukService {
     String path = join(await getDatabasesPath(), 'perlakuan_pupuk.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createTable,
     );
   }

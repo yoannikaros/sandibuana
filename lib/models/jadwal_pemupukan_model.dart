@@ -8,6 +8,7 @@ class JadwalPemupukanModel {
   final String perlakuanPupuk;
   final String? perlakuanTambahan;
   final String? catatan;
+  final String? idPembenihan; // Reference to catatan_pembenihan
   final bool sudahSelesai;
   final String? diselesaikanOleh;
   final DateTime? diselesaikanPada;
@@ -22,6 +23,7 @@ class JadwalPemupukanModel {
     required this.perlakuanPupuk,
     this.perlakuanTambahan,
     this.catatan,
+    this.idPembenihan,
     this.sudahSelesai = false,
     this.diselesaikanOleh,
     this.diselesaikanPada,
@@ -41,6 +43,7 @@ class JadwalPemupukanModel {
       perlakuanPupuk: data['perlakuan_pupuk'] ?? '',
       perlakuanTambahan: data['perlakuan_tambahan'],
       catatan: data['catatan'],
+      idPembenihan: data['id_pembenihan'],
       sudahSelesai: data['sudah_selesai'] ?? false,
       diselesaikanOleh: data['diselesaikan_oleh'],
       diselesaikanPada: data['diselesaikan_pada'] != null 
@@ -60,6 +63,7 @@ class JadwalPemupukanModel {
       'perlakuan_pupuk': perlakuanPupuk,
       'perlakuan_tambahan': perlakuanTambahan,
       'catatan': catatan,
+      'id_pembenihan': idPembenihan,
       'sudah_selesai': sudahSelesai,
       'diselesaikan_oleh': diselesaikanOleh,
       'diselesaikan_pada': diselesaikanPada != null 
@@ -79,6 +83,7 @@ class JadwalPemupukanModel {
     String? perlakuanPupuk,
     String? perlakuanTambahan,
     String? catatan,
+    String? idPembenihan,
     bool? sudahSelesai,
     String? diselesaikanOleh,
     DateTime? diselesaikanPada,
@@ -93,6 +98,7 @@ class JadwalPemupukanModel {
       perlakuanPupuk: perlakuanPupuk ?? this.perlakuanPupuk,
       perlakuanTambahan: perlakuanTambahan ?? this.perlakuanTambahan,
       catatan: catatan ?? this.catatan,
+      idPembenihan: idPembenihan ?? this.idPembenihan,
       sudahSelesai: sudahSelesai ?? this.sudahSelesai,
       diselesaikanOleh: diselesaikanOleh ?? this.diselesaikanOleh,
       diselesaikanPada: diselesaikanPada ?? this.diselesaikanPada,

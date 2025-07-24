@@ -292,7 +292,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               _buildMenuCard(
                                 context,
-                                'Catatan Perlakuan',
+                                'Catatan Aktivitas',
                                 Icons.note_alt,
                                 Colors.teal,
                                 () {

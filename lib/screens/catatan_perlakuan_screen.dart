@@ -39,7 +39,7 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catatan Perlakuan'),
+        title: const Text('Catatan Aktivitas'),
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
         elevation: 0,
@@ -1116,27 +1116,27 @@ class _CatatanPerlakuanScreenState extends State<CatatanPerlakuanScreen> {
                     const SizedBox(height: 16),
                     
                     // Relasi dengan Catatan Pembenihan
-                    DropdownButtonFormField<String>(
-                      value: selectedIdPembenihan,
-                      decoration: const InputDecoration(
-                        labelText: 'Relasi Catatan Pembenihan (Opsional)',
-                        border: OutlineInputBorder(),
-                        helperText: 'Pilih catatan pembenihan yang terkait',
-                      ),
-                      items: [null, 'PEM001', 'PEM002', 'PEM003'] // TODO: Load from provider
-                          .map((id) => DropdownMenuItem(
-                                value: id,
-                                child: Text(id ?? 'Tidak ada relasi'),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedIdPembenihan = value;
-                          if (value != null) selectedIdPenanaman = null; // Reset penanaman jika pembenihan dipilih
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
+                    // DropdownButtonFormField<String>(
+                    //   value: selectedIdPembenihan,
+                    //   decoration: const InputDecoration(
+                    //     labelText: 'Relasi Catatan Pembenihan (Opsional)',
+                    //     border: OutlineInputBorder(),
+                    //     helperText: 'Pilih catatan pembenihan yang terkait',
+                    //   ),
+                    //   items: [null, 'PEM001', 'PEM002', 'PEM003'] // TODO: Load from provider
+                    //       .map((id) => DropdownMenuItem(
+                    //             value: id,
+                    //             child: Text(id ?? 'Tidak ada relasi'),
+                    //           ))
+                    //       .toList(),
+                    //   onChanged: (value) {
+                    //     setState(() {
+                    //       selectedIdPembenihan = value;
+                    //       if (value != null) selectedIdPenanaman = null; // Reset penanaman jika pembenihan dipilih
+                    //     });
+                    //   },
+                    // ),
+                    // const SizedBox(height: 16),
                     
                     // Jumlah dan Satuan
                     Row(
