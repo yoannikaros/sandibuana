@@ -12,7 +12,7 @@ class CatatanPembenihanModel {
   final String? satuan;
   final String kodeBatch; // Wajib diisi
   final String status; // "berjalan", "panen", "gagal"
-  final DateTime? tanggalPanenTarget;
+
   final String? catatan;
   final String dicatatOleh; // Reference to pengguna
   final DateTime dicatatPada;
@@ -29,7 +29,7 @@ class CatatanPembenihanModel {
     this.satuan,
     required this.kodeBatch,
     required this.status,
-    this.tanggalPanenTarget,
+
     this.catatan,
     required this.dicatatOleh,
     required this.dicatatPada,
@@ -49,7 +49,7 @@ class CatatanPembenihanModel {
       satuan: map['satuan'],
       kodeBatch: map['kode_batch'] ?? '',
       status: map['status'] ?? 'berjalan',
-      tanggalPanenTarget: map['tanggal_panen_target']?.toDate(),
+
       catatan: map['catatan'],
       dicatatOleh: map['dicatat_oleh'] ?? '',
       dicatatPada: map['dicatat_pada']?.toDate() ?? DateTime.now(),
@@ -69,7 +69,7 @@ class CatatanPembenihanModel {
       'satuan': satuan,
       'kode_batch': kodeBatch,
       'status': status,
-      'tanggal_panen_target': tanggalPanenTarget != null ? Timestamp.fromDate(tanggalPanenTarget!) : null,
+
       'catatan': catatan,
       'dicatat_oleh': dicatatOleh,
       'dicatat_pada': Timestamp.fromDate(dicatatPada),
@@ -89,7 +89,7 @@ class CatatanPembenihanModel {
     String? satuan,
     String? kodeBatch,
     String? status,
-    DateTime? tanggalPanenTarget,
+
     String? catatan,
     String? dicatatOleh,
     DateTime? dicatatPada,
@@ -106,7 +106,7 @@ class CatatanPembenihanModel {
       satuan: satuan ?? this.satuan,
       kodeBatch: kodeBatch ?? this.kodeBatch,
       status: status ?? this.status,
-      tanggalPanenTarget: tanggalPanenTarget ?? this.tanggalPanenTarget,
+
       catatan: catatan ?? this.catatan,
       dicatatOleh: dicatatOleh ?? this.dicatatOleh,
       dicatatPada: dicatatPada ?? this.dicatatPada,

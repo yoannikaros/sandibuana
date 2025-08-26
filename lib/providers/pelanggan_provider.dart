@@ -42,25 +42,43 @@ class PelangganProvider with ChangeNotifier {
       _setLoading(true);
       _error = null;
       
-      _pelangganList = await _pelangganService.getAllPelanggan();
+      final pelangganData = await _pelangganService.getAllPelanggan();
+      if (pelangganData.isNotEmpty) {
+        _pelangganList = pelangganData;
+      } else {
+        _pelangganList = [];
+        print('No pelanggan data found');
+      }
       notifyListeners();
     } catch (e) {
-      _setError(e.toString());
+      _setError('Gagal memuat data pelanggan: ${e.toString()}');
+      _pelangganList = []; // Set empty list on error
+      notifyListeners();
+      rethrow; // Re-throw to allow caller to handle
     } finally {
       _setLoading(false);
     }
   }
-  
+
   // Load active pelanggan only
   Future<void> loadPelangganAktif() async {
     try {
       _setLoading(true);
       _error = null;
       
-      _pelangganList = await _pelangganService.getPelangganAktif();
+      final pelangganData = await _pelangganService.getPelangganAktif();
+      if (pelangganData.isNotEmpty) {
+        _pelangganList = pelangganData;
+      } else {
+        _pelangganList = [];
+        print('No active pelanggan data found');
+      }
       notifyListeners();
     } catch (e) {
-      _setError(e.toString());
+      _setError('Gagal memuat data pelanggan aktif: ${e.toString()}');
+      _pelangganList = []; // Set empty list on error
+      notifyListeners();
+      rethrow; // Re-throw to allow caller to handle
     } finally {
       _setLoading(false);
     }
@@ -88,7 +106,7 @@ class PelangganProvider with ChangeNotifier {
       _error = null;
       
       await _pelangganService.tambahPelanggan(pelanggan);
-      await loadPelanggan(); // Refresh list
+      await loadPelangganAktif(); // Refresh list
       return true;
     } catch (e) {
       _setError(e.toString());
@@ -105,7 +123,7 @@ class PelangganProvider with ChangeNotifier {
       _error = null;
       
       await _pelangganService.updatePelanggan(id, pelanggan);
-      await loadPelanggan(); // Refresh list
+      await loadPelangganAktif(); // Refresh list
       return true;
     } catch (e) {
       _setError(e.toString());
@@ -122,7 +140,7 @@ class PelangganProvider with ChangeNotifier {
       _error = null;
       
       await _pelangganService.hapusPelanggan(id);
-      await loadPelanggan(); // Refresh list
+      await loadPelangganAktif(); // Refresh list
       return true;
     } catch (e) {
       _setError(e.toString());
@@ -181,11 +199,50 @@ class PelangganProvider with ChangeNotifier {
   Stream<List<PelangganModel>> get pelangganStream {
     return _pelangganService.streamPelangganAktif();
   }
+
+  // Listen to real-time updates
+  void listenToRealtimeUpdates() {
+    _pelangganService.streamPelangganAktif().listen(
+      (pelangganList) {
+        _pelangganList = pelangganList;
+        notifyListeners();
+      },
+      onError: (error) {
+        _setError('Error real-time update: ${error.toString()}');
+      },
+    );
+  }
   
   // Clear error
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Force refresh data from Firebase (only active customers)
+  Future<void> forceRefresh() async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      // Clear local cache and reload from Firebase (only active customers)
+      _pelangganList.clear();
+      _pelangganList = await _pelangganService.getPelangganAktif();
+      notifyListeners();
+    } catch (e) {
+      _setError('Gagal memuat ulang data: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // Get pelanggan by ID (synchronous helper method)
+  PelangganModel? getPelangganByIdSync(String id) {
+    try {
+      return _pelangganList.firstWhere((p) => p.id == id);
+    } catch (e) {
+      return null;
+    }
   }
   
   // Get pelanggan name by ID (helper method)

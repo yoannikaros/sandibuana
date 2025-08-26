@@ -6,7 +6,6 @@ class PenanamanSayurModel {
   final DateTime tanggalTanam;
   final String jenisSayur;
   final int jumlahDitanam;
-  final String? lokasi;
   final String tahapPertumbuhan; // semai, vegetatif, siap_panen, panen, gagal
   final DateTime? tanggalPanen;
   final int jumlahDipanen;
@@ -14,7 +13,6 @@ class PenanamanSayurModel {
   final String? alasanGagal;
   final double tingkatKeberhasilan;
   final double? harga; // Harga per unit sayur
-  final String? catatan;
   final String dicatatOleh; // Reference to pengguna
   final DateTime dicatatPada;
   final DateTime diubahPada;
@@ -25,7 +23,6 @@ class PenanamanSayurModel {
     required this.tanggalTanam,
     required this.jenisSayur,
     required this.jumlahDitanam,
-    this.lokasi,
     this.tahapPertumbuhan = 'semai',
     this.tanggalPanen,
     this.jumlahDipanen = 0,
@@ -33,7 +30,6 @@ class PenanamanSayurModel {
     this.alasanGagal,
     this.tingkatKeberhasilan = 0.0,
     this.harga,
-    this.catatan,
     required this.dicatatOleh,
     required this.dicatatPada,
     required this.diubahPada,
@@ -49,7 +45,6 @@ class PenanamanSayurModel {
       tanggalTanam: (data['tanggal_tanam'] as Timestamp).toDate(),
       jenisSayur: data['jenis_sayur'] ?? '',
       jumlahDitanam: data['jumlah_ditanam'] ?? 0,
-      lokasi: data['lokasi'],
       tahapPertumbuhan: data['tahap_pertumbuhan'] ?? 'semai',
       tanggalPanen: data['tanggal_panen'] != null 
           ? (data['tanggal_panen'] as Timestamp).toDate() 
@@ -59,7 +54,6 @@ class PenanamanSayurModel {
       alasanGagal: data['alasan_gagal'],
       tingkatKeberhasilan: (data['tingkat_keberhasilan'] ?? 0.0).toDouble(),
       harga: data['harga'] != null ? (data['harga'] as num).toDouble() : null,
-      catatan: data['catatan'],
       dicatatOleh: data['dicatat_oleh'] ?? '',
       dicatatPada: (data['dicatat_pada'] as Timestamp).toDate(),
       diubahPada: (data['diubah_pada'] as Timestamp).toDate(),
@@ -73,7 +67,6 @@ class PenanamanSayurModel {
       'tanggal_tanam': Timestamp.fromDate(tanggalTanam),
       'jenis_sayur': jenisSayur,
       'jumlah_ditanam': jumlahDitanam,
-      'lokasi': lokasi,
       'tahap_pertumbuhan': tahapPertumbuhan,
       'tanggal_panen': tanggalPanen != null ? Timestamp.fromDate(tanggalPanen!) : null,
       'jumlah_dipanen': jumlahDipanen,
@@ -81,7 +74,6 @@ class PenanamanSayurModel {
       'alasan_gagal': alasanGagal,
       'tingkat_keberhasilan': tingkatKeberhasilan,
       'harga': harga,
-      'catatan': catatan,
       'dicatat_oleh': dicatatOleh,
       'dicatat_pada': Timestamp.fromDate(dicatatPada),
       'diubah_pada': Timestamp.fromDate(diubahPada),
@@ -115,13 +107,7 @@ class PenanamanSayurModel {
     }
   }
 
-  String get displayLokasi {
-    return lokasi?.isNotEmpty == true ? lokasi! : 'Tidak Ditentukan';
-  }
 
-  String get displayCatatan {
-    return catatan?.isNotEmpty == true ? catatan! : 'Tidak ada catatan';
-  }
 
   String get displayAlasanGagal {
     return alasanGagal?.isNotEmpty == true ? alasanGagal! : 'Tidak ada alasan';
@@ -134,7 +120,6 @@ class PenanamanSayurModel {
     DateTime? tanggalTanam,
     String? jenisSayur,
     int? jumlahDitanam,
-    String? lokasi,
     String? tahapPertumbuhan,
     DateTime? tanggalPanen,
     int? jumlahDipanen,
@@ -142,7 +127,6 @@ class PenanamanSayurModel {
     String? alasanGagal,
     double? tingkatKeberhasilan,
     double? harga,
-    String? catatan,
     String? dicatatOleh,
     DateTime? dicatatPada,
     DateTime? diubahPada,
@@ -153,7 +137,6 @@ class PenanamanSayurModel {
       tanggalTanam: tanggalTanam ?? this.tanggalTanam,
       jenisSayur: jenisSayur ?? this.jenisSayur,
       jumlahDitanam: jumlahDitanam ?? this.jumlahDitanam,
-      lokasi: lokasi ?? this.lokasi,
       tahapPertumbuhan: tahapPertumbuhan ?? this.tahapPertumbuhan,
       tanggalPanen: tanggalPanen ?? this.tanggalPanen,
       jumlahDipanen: jumlahDipanen ?? this.jumlahDipanen,
@@ -161,7 +144,6 @@ class PenanamanSayurModel {
       alasanGagal: alasanGagal ?? this.alasanGagal,
       tingkatKeberhasilan: tingkatKeberhasilan ?? this.tingkatKeberhasilan,
       harga: harga ?? this.harga,
-      catatan: catatan ?? this.catatan,
       dicatatOleh: dicatatOleh ?? this.dicatatOleh,
       dicatatPada: dicatatPada ?? this.dicatatPada,
       diubahPada: diubahPada ?? this.diubahPada,

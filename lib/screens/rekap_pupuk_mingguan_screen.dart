@@ -29,10 +29,18 @@ class _RekapPupukMingguanScreenState extends State<RekapPupukMingguanScreen> {
     // Initialize Indonesian locale for DateFormat
     initializeDateFormatting('id_ID', null);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<RekapPupukMingguanProvider>(context, listen: false);
-      provider.initialize();
-      provider.loadStatistik();
+      _initializeData();
     });
+  }
+
+  Future<void> _initializeData() async {
+    try {
+      final provider = Provider.of<RekapPupukMingguanProvider>(context, listen: false);
+      await provider.initialize();
+      await provider.loadStatistik();
+    } catch (e) {
+      print('Error initializing rekap pupuk data: $e');
+    }
   }
 
   @override

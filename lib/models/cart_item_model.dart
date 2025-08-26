@@ -1,63 +1,54 @@
-class CartItem {
+class CartItemModel {
   final String id;
+  final String idPenanaman;
   final String jenisSayur;
   final double harga;
   final double jumlah;
   final String satuan;
-  final double total;
-  final DateTime addedAt;
+  final double totalHarga;
 
-  CartItem({
+  CartItemModel({
     required this.id,
+    required this.idPenanaman,
     required this.jenisSayur,
     required this.harga,
     required this.jumlah,
     required this.satuan,
-    required this.total,
-    required this.addedAt,
+    required this.totalHarga,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'jenis_sayur': jenisSayur,
-      'harga': harga,
-      'jumlah': jumlah,
-      'satuan': satuan,
-      'total': total,
-      'added_at': addedAt.millisecondsSinceEpoch,
-    };
-  }
-
-  factory CartItem.fromMap(Map<String, dynamic> map) {
-    return CartItem(
-      id: map['id'] ?? '',
-      jenisSayur: map['jenis_sayur'] ?? '',
-      harga: (map['harga'] ?? 0.0).toDouble(),
-      jumlah: (map['jumlah'] ?? 0.0).toDouble(),
-      satuan: map['satuan'] ?? '',
-      total: (map['total'] ?? 0.0).toDouble(),
-      addedAt: DateTime.fromMillisecondsSinceEpoch(map['added_at'] ?? 0),
-    );
-  }
-
-  CartItem copyWith({
+  // Copy with method for updates
+  CartItemModel copyWith({
     String? id,
+    String? idPenanaman,
     String? jenisSayur,
     double? harga,
     double? jumlah,
     String? satuan,
-    double? total,
-    DateTime? addedAt,
+    double? totalHarga,
   }) {
-    return CartItem(
+    return CartItemModel(
       id: id ?? this.id,
+      idPenanaman: idPenanaman ?? this.idPenanaman,
       jenisSayur: jenisSayur ?? this.jenisSayur,
       harga: harga ?? this.harga,
       jumlah: jumlah ?? this.jumlah,
       satuan: satuan ?? this.satuan,
-      total: total ?? this.total,
-      addedAt: addedAt ?? this.addedAt,
+      totalHarga: totalHarga ?? this.totalHarga,
     );
   }
+
+  @override
+  String toString() {
+    return 'CartItemModel(id: $id, jenisSayur: $jenisSayur, jumlah: $jumlah, totalHarga: $totalHarga)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is CartItemModel && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

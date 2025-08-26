@@ -21,9 +21,18 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // Show loading if AuthProvider is loading
-        if (authProvider.isLoading) {
-          return _buildLoadingScreen('Memuat...');
+        // Show loading if not initialized yet
+        if (!authProvider.isInitialized) {
+          return _buildLoadingScreen('Memeriksa status login...');
+        }
+
+        // Additional safety check
+        if (authProvider == null) {
+          return _buildErrorScreen(
+            context,
+            'Error Sistem',
+            'AuthProvider tidak tersedia. Silakan restart aplikasi.',
+          );
         }
 
         return StreamBuilder<User?>(
@@ -34,13 +43,13 @@ class AuthWrapper extends StatelessWidget {
               return _buildErrorScreen(
                 context,
                 'Terjadi kesalahan koneksi',
-                snapshot.error.toString(),
+                'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
               );
             }
 
-            // Show loading while checking auth state
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return _buildLoadingScreen('Memeriksa status login...');
+            // Handle connection state
+            if (snapshot.connectionState == ConnectionState.waiting && !authProvider.isInitialized) {
+              return _buildLoadingScreen('Menghubungkan ke server...');
             }
 
             // Check if user is logged in and user data is available

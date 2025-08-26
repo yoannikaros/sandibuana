@@ -127,7 +127,7 @@ class PengeluaranService {
   Future<int> tambahPengeluaran(PengeluaranHarianModel pengeluaran) async {
     try {
       final db = await _databaseHelper.database;
-      final id = await db.insert('pengeluaran_harian', pengeluaran.toMap());
+      final id = await db.insert('pengeluaran_harian', pengeluaran.toMapForInsert());
       return id;
     } catch (e) {
       throw Exception('Gagal menambah pengeluaran: $e');
@@ -138,9 +138,11 @@ class PengeluaranService {
   Future<void> updatePengeluaran(String id, PengeluaranHarianModel pengeluaran) async {
     try {
       final db = await _databaseHelper.database;
+      // Create map without id for update
+      final updateMap = pengeluaran.toMapForInsert();
       await db.update(
         'pengeluaran_harian',
-        pengeluaran.toMap(),
+        updateMap,
         where: 'id = ?',
         whereArgs: [id],
       );

@@ -91,22 +91,7 @@ class PenanamanSayurService {
     }
   }
 
-  // Get penanaman sayur by lokasi
-  Future<List<PenanamanSayurModel>> getPenanamanSayurByLokasi(String lokasi) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('lokasi', isEqualTo: lokasi)
-          .orderBy('tanggal_tanam', descending: true)
-          .get();
 
-      return querySnapshot.docs
-          .map((doc) => PenanamanSayurModel.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      throw Exception('Gagal mengambil data penanaman sayur berdasarkan lokasi: ${e.toString()}');
-    }
-  }
 
   // Get penanaman sayur by pembenihan ID
   Future<List<PenanamanSayurModel>> getPenanamanSayurByPembenihan(String idPembenihan) async {

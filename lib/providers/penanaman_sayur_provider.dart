@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/penanaman_sayur_model.dart';
 import '../models/catatan_pembenihan_model.dart';
 import '../services/penanaman_sayur_service.dart';
@@ -12,6 +13,7 @@ class PenanamanSayurProvider with ChangeNotifier {
   List<PenanamanSayurModel> _penanamanSayurList = [];
   List<CatatanPembenihanModel> _catatanPembenihanList = [];
   List<String> _availableJenisSayur = [];
+  Map<String, String> _jenisBenihMap = {}; // Map idBenih -> namaBenih
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _summaryStatistics;
@@ -22,6 +24,7 @@ class PenanamanSayurProvider with ChangeNotifier {
   List<PenanamanSayurModel> get penanamanSayurList => _penanamanSayurList;
   List<CatatanPembenihanModel> get catatanPembenihanList => _catatanPembenihanList;
   List<String> get availableJenisSayur => _availableJenisSayur;
+  Map<String, String> get jenisBenihMap => _jenisBenihMap;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get error => _errorMessage; // Alias for compatibility
@@ -106,28 +109,38 @@ class PenanamanSayurProvider with ChangeNotifier {
     }
   }
 
-  // Load penanaman sayur by lokasi
-  Future<void> loadPenanamanSayurByLokasi(String lokasi) async {
-    try {
-      _setLoading(true);
-      _clearError();
-      _penanamanSayurList = await _penanamanSayurService.getPenanamanSayurByLokasi(lokasi);
-    } catch (e) {
-      _setError(e.toString());
-    } finally {
-      _setLoading(false);
-    }
-  }
+
 
   // Load catatan pembenihan for dropdown
   Future<void> loadCatatanPembenihanForDropdown() async {
     try {
       _clearError();
       _catatanPembenihanList = await _benihService.getAllCatatanPembenihan();
+      await _loadJenisBenihMap();
       notifyListeners();
     } catch (e) {
       _setError(e.toString());
     }
+  }
+
+  // Load jenis benih map for dropdown display
+  Future<void> _loadJenisBenihMap() async {
+    try {
+      final jenisBenihList = await _benihService.getAllJenisBenih();
+      _jenisBenihMap = {
+        for (var benih in jenisBenihList) benih.idBenih: benih.namaBenih
+      };
+    } catch (e) {
+      // Silently fail, dropdown will show ID instead of name
+      if (kDebugMode) {
+        debugPrint('Error loading jenis benih map: $e');
+      }
+    }
+  }
+
+  // Get nama benih by ID
+  String getNamaBenihById(String idBenih) {
+    return _jenisBenihMap[idBenih] ?? 'Benih tidak diketahui';
   }
 
   // Load available jenis sayur for dropdown
@@ -148,8 +161,6 @@ class PenanamanSayurProvider with ChangeNotifier {
     required String jenisSayur,
     required int jumlahDitanam,
     double? harga,
-    String? lokasi,
-    String? catatan,
     required String dicatatOleh,
   }) async {
     try {
@@ -162,13 +173,11 @@ class PenanamanSayurProvider with ChangeNotifier {
         tanggalTanam: tanggalTanam,
         jenisSayur: jenisSayur,
         jumlahDitanam: jumlahDitanam,
-        lokasi: lokasi,
         tahapPertumbuhan: 'semai',
         jumlahDipanen: 0,
         jumlahGagal: 0,
         tingkatKeberhasilan: 0.0,
         harga: harga,
-        catatan: catatan,
         dicatatOleh: dicatatOleh,
         dicatatPada: DateTime.now(),
         diubahPada: DateTime.now(),
@@ -310,9 +319,7 @@ class PenanamanSayurProvider with ChangeNotifier {
     final lowerQuery = query.toLowerCase();
     return _penanamanSayurList.where((penanaman) {
       return penanaman.jenisSayur.toLowerCase().contains(lowerQuery) ||
-             (penanaman.lokasi?.toLowerCase().contains(lowerQuery) ?? false) ||
-             penanaman.tahapPertumbuhan.toLowerCase().contains(lowerQuery) ||
-             (penanaman.catatan?.toLowerCase().contains(lowerQuery) ?? false);
+             penanaman.tahapPertumbuhan.toLowerCase().contains(lowerQuery);
     }).toList();
   }
 
@@ -338,14 +345,7 @@ class PenanamanSayurProvider with ChangeNotifier {
     return ['Semua', ...uniqueJenis.toList()..sort()];
   }
 
-  // Get unique lokasi for filter dropdown
-  List<String> getUniqueLokasi() {
-    final Set<String> uniqueLokasi = _penanamanSayurList
-        .where((penanaman) => penanaman.lokasi != null && penanaman.lokasi!.isNotEmpty)
-        .map((penanaman) => penanaman.lokasi!)
-        .toSet();
-    return ['Semua', ...uniqueLokasi.toList()..sort()];
-  }
+
 
   // Get tahap pertumbuhan options
   List<String> getTahapPertumbuhanOptions() {
@@ -366,7 +366,7 @@ class PenanamanSayurProvider with ChangeNotifier {
       final catatan = _catatanPembenihanList.firstWhere(
         (catatan) => catatan.idPembenihan == idPembenihan,
       );
-      return 'Batch: ${catatan.kodeBatch ?? 'N/A'} - ${catatan.tanggalSemai.day}/${catatan.tanggalSemai.month}/${catatan.tanggalSemai.year}';
+      return 'Batch: ${catatan.kodeBatch} - ${catatan.tanggalSemai.day}/${catatan.tanggalSemai.month}/${catatan.tanggalSemai.year}';
     } catch (e) {
       return 'Batch tidak ditemukan';
     }
@@ -415,6 +415,12 @@ class PenanamanSayurProvider with ChangeNotifier {
   // Get latest price for jenis sayur
   double? getLatestPriceByJenisSayur(String jenisSayur) {
     try {
+      // Debug: Print total data count
+      if (kDebugMode) {
+        debugPrint('DEBUG: Total penanaman sayur data: ${_penanamanSayurList.length}');
+        debugPrint('DEBUG: Looking for jenis sayur: $jenisSayur');
+      }
+      
       // Filter penanaman sayur by jenis and sort by tanggal_tanam descending
       final filteredList = _penanamanSayurList
           .where((penanaman) => 
@@ -423,13 +429,29 @@ class PenanamanSayurProvider with ChangeNotifier {
               penanaman.harga! > 0)
           .toList();
       
+      // Debug: Print filtered results
+      if (kDebugMode) {
+        debugPrint('DEBUG: Filtered list count for $jenisSayur: ${filteredList.length}');
+        for (var penanaman in filteredList) {
+          debugPrint('DEBUG: - ${penanaman.jenisSayur}: Rp ${penanaman.harga} (${penanaman.tanggalTanam})');
+        }
+      }
+      
       if (filteredList.isEmpty) return null;
       
       // Sort by tanggal_tanam descending to get the latest
       filteredList.sort((a, b) => b.tanggalTanam.compareTo(a.tanggalTanam));
       
-      return filteredList.first.harga;
+      final latestPrice = filteredList.first.harga;
+      if (kDebugMode) {
+        debugPrint('DEBUG: Latest price for $jenisSayur: Rp $latestPrice');
+      }
+      
+      return latestPrice;
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('DEBUG: Error getting latest price for $jenisSayur: $e');
+      }
       return null;
     }
   }

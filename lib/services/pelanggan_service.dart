@@ -13,10 +13,26 @@ class PelangganService {
           .orderBy('nama_pelanggan')
           .get();
       
-      return querySnapshot.docs
-          .map((doc) => PelangganModel.fromFirestore(doc))
-          .toList();
+      if (querySnapshot.docs.isEmpty) {
+        print('No pelanggan documents found in Firestore');
+        return [];
+      }
+      
+      final List<PelangganModel> pelangganList = [];
+      
+      for (final doc in querySnapshot.docs) {
+        try {
+          final pelanggan = PelangganModel.fromFirestore(doc);
+          pelangganList.add(pelanggan);
+        } catch (e) {
+          print('Error parsing pelanggan document ${doc.id}: $e');
+          continue; // Skip this document and continue with others
+        }
+      }
+      
+      return pelangganList;
     } catch (e) {
+      print('Error in getAllPelanggan: $e');
       throw Exception('Gagal mengambil data pelanggan: $e');
     }
   }
@@ -29,15 +45,36 @@ class PelangganService {
           .where('aktif', isEqualTo: true)
           .get();
       
-      final pelangganList = querySnapshot.docs
-          .map((doc) => PelangganModel.fromFirestore(doc))
-          .toList();
+      if (querySnapshot.docs.isEmpty) {
+        print('No active pelanggan documents found in Firestore');
+        return [];
+      }
+      
+      final List<PelangganModel> pelangganList = [];
+      
+      for (final doc in querySnapshot.docs) {
+        try {
+          final pelanggan = PelangganModel.fromFirestore(doc);
+          if (pelanggan.aktif) { // Double check aktif status
+            pelangganList.add(pelanggan);
+          }
+        } catch (e) {
+          print('Error parsing active pelanggan document ${doc.id}: $e');
+          continue; // Skip this document and continue with others
+        }
+      }
       
       // Sort by nama_pelanggan in memory to avoid composite index
-      pelangganList.sort((a, b) => a.namaPelanggan.compareTo(b.namaPelanggan));
+      try {
+        pelangganList.sort((a, b) => a.namaPelanggan.compareTo(b.namaPelanggan));
+      } catch (e) {
+        print('Error sorting pelanggan list: $e');
+        // Continue without sorting if there's an error
+      }
       
       return pelangganList;
     } catch (e) {
+      print('Error in getPelangganAktif: $e');
       throw Exception('Gagal mengambil data pelanggan aktif: $e');
     }
   }
@@ -78,11 +115,13 @@ class PelangganService {
       // Client-side filtering for better search
       return pelangganList.where((pelanggan) {
         final nama = pelanggan.namaPelanggan.toLowerCase();
+        final tempatUsaha = pelanggan.namaTempatUsaha?.toLowerCase() ?? '';
         final kontak = pelanggan.kontakPerson?.toLowerCase() ?? '';
         final telepon = pelanggan.telepon ?? '';
         final searchTerm = keyword.toLowerCase();
         
         return nama.contains(searchTerm) || 
+               tempatUsaha.contains(searchTerm) ||
                kontak.contains(searchTerm) ||
                telepon.contains(searchTerm);
       }).toList();
@@ -180,6 +219,7 @@ class PelangganService {
         {
           'nama_pelanggan': 'Restoran Sari Rasa',
           'jenis_pelanggan': 'restoran',
+          'nama_tempat_usaha': 'Restoran Sari Rasa',
           'kontak_person': 'Budi Santoso',
           'telepon': '081234567890',
           'alamat': 'Jl. Merdeka No. 123, Jakarta',
@@ -189,6 +229,7 @@ class PelangganService {
         {
           'nama_pelanggan': 'Hotel Grand Indonesia',
           'jenis_pelanggan': 'hotel',
+          'nama_tempat_usaha': 'Hotel Grand Indonesia',
           'kontak_person': 'Siti Nurhaliza',
           'telepon': '081234567891',
           'alamat': 'Jl. Sudirman No. 456, Jakarta',
@@ -198,6 +239,7 @@ class PelangganService {
         {
           'nama_pelanggan': 'Ibu Ani',
           'jenis_pelanggan': 'individu',
+          'nama_tempat_usaha': null,
           'kontak_person': 'Ani Wijaya',
           'telepon': '081234567892',
           'alamat': 'Jl. Kebon Jeruk No. 789, Jakarta',

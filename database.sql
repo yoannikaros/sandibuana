@@ -126,8 +126,9 @@ CREATE TABLE pengeluaran_harian (
 CREATE TABLE monitoring_nutrisi_harian (
     id_monitoring INT PRIMARY KEY AUTO_INCREMENT,
     tanggal_monitoring DATE NOT NULL,
-    id_tandon INT NOT NULL,
-    nilai_ppm DECIMAL(6,2) NOT NULL,
+    id_pembenihan INT, -- Optional reference to catatan_pembenihan
+    id_penanaman INT, -- Optional reference to penanaman_sayur
+    nilai_ppm DECIMAL(6,2),
     air_ditambah DECIMAL(8,2), -- liter air yang ditambahkan
     nutrisi_ditambah DECIMAL(8,2), -- ml atau gram nutrisi yang ditambahkan
     tingkat_ph DECIMAL(4,2),
@@ -135,8 +136,19 @@ CREATE TABLE monitoring_nutrisi_harian (
     catatan TEXT,
     dicatat_oleh INT NOT NULL,
     dicatat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_tandon) REFERENCES tandon_air(id_tandon),
+    FOREIGN KEY (id_pembenihan) REFERENCES catatan_pembenihan(id_pembenihan),
+    FOREIGN KEY (id_penanaman) REFERENCES penanaman_sayur(id_penanaman),
     FOREIGN KEY (dicatat_oleh) REFERENCES pengguna(id_pengguna)
+);
+
+-- Tabel relasi many-to-many untuk monitoring nutrisi dan tandon
+CREATE TABLE monitoring_tandon (
+    id_monitoring_tandon INT PRIMARY KEY AUTO_INCREMENT,
+    id_monitoring INT NOT NULL,
+    id_tandon INT NOT NULL,
+    FOREIGN KEY (id_monitoring) REFERENCES monitoring_nutrisi_harian(id_monitoring) ON DELETE CASCADE,
+    FOREIGN KEY (id_tandon) REFERENCES tandon_air(id_tandon),
+    UNIQUE KEY unique_monitoring_tandon (id_monitoring, id_tandon)
 );
 
 -- ========================================
@@ -389,6 +401,10 @@ GROUP BY YEAR(p.tanggal_pengeluaran), MONTH(p.tanggal_pengeluaran), kp.nama_kate
 CREATE INDEX idx_penjualan_harian_tanggal ON penjualan_harian(tanggal_jual);
 CREATE INDEX idx_pengeluaran_harian_tanggal ON pengeluaran_harian(tanggal_pengeluaran);
 CREATE INDEX idx_monitoring_nutrisi_tanggal ON monitoring_nutrisi_harian(tanggal_monitoring);
+CREATE INDEX idx_monitoring_nutrisi_pembenihan ON monitoring_nutrisi_harian(id_pembenihan);
+CREATE INDEX idx_monitoring_nutrisi_penanaman ON monitoring_nutrisi_harian(id_penanaman);
+CREATE INDEX idx_monitoring_tandon_monitoring ON monitoring_tandon(id_monitoring);
+CREATE INDEX idx_monitoring_tandon_tandon ON monitoring_tandon(id_tandon);
 CREATE INDEX idx_penanaman_sayur_tanggal ON penanaman_sayur(tanggal_tanam);
 CREATE INDEX idx_catatan_pembenihan_tanggal ON catatan_pembenihan(tanggal_semai);
 CREATE INDEX idx_catatan_perlakuan_tanggal ON catatan_perlakuan(tanggal_perlakuan);

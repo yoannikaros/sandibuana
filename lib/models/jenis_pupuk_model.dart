@@ -5,6 +5,7 @@ class JenisPupukModel {
   final String tipe; // makro, mikro, organik, kimia
   final String? keterangan;
   final bool aktif;
+  final double stok; // stok pupuk dalam kg atau liter
 
   JenisPupukModel({
     required this.id,
@@ -13,6 +14,7 @@ class JenisPupukModel {
     required this.tipe,
     this.keterangan,
     this.aktif = true,
+    this.stok = 0.0,
   });
 
   // Convert from Firestore document
@@ -24,6 +26,7 @@ class JenisPupukModel {
       tipe: data['tipe'] ?? 'makro',
       keterangan: data['keterangan'],
       aktif: data['aktif'] ?? true,
+      stok: (data['stok'] ?? 0.0).toDouble(),
     );
   }
 
@@ -35,6 +38,7 @@ class JenisPupukModel {
       'tipe': tipe,
       'keterangan': keterangan,
       'aktif': aktif,
+      'stok': stok,
     };
   }
 
@@ -46,6 +50,7 @@ class JenisPupukModel {
     String? tipe,
     String? keterangan,
     bool? aktif,
+    double? stok,
   }) {
     return JenisPupukModel(
       id: id ?? this.id,
@@ -54,12 +59,13 @@ class JenisPupukModel {
       tipe: tipe ?? this.tipe,
       keterangan: keterangan ?? this.keterangan,
       aktif: aktif ?? this.aktif,
+      stok: stok ?? this.stok,
     );
   }
 
   @override
   String toString() {
-    return 'JenisPupukModel(id: $id, namaPupuk: $namaPupuk, kodePupuk: $kodePupuk, tipe: $tipe, aktif: $aktif)';
+    return 'JenisPupukModel(id: $id, namaPupuk: $namaPupuk, kodePupuk: $kodePupuk, tipe: $tipe, aktif: $aktif, stok: $stok)';
   }
 
   @override

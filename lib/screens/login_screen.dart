@@ -51,11 +51,13 @@ class _LoginScreenState extends State<LoginScreen> {
       success = await authProvider.loginWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        rememberMe: _rememberMe,
       );
     } else {
       success = await authProvider.loginWithUsername(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
+        rememberMe: _rememberMe,
       );
     }
 

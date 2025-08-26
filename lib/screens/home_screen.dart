@@ -16,13 +16,17 @@ import 'kegagalan_panen_screen.dart';
 import 'jadwal_pemupukan_screen.dart';
 import 'catatan_perlakuan_screen.dart';
 import 'pembelian_benih_screen.dart';
+import 'kondisi_meja_screen.dart';
 
-import 'penjualan_harian_screen.dart';
-import 'rekap_benih_mingguan_screen.dart';
+
 import 'rekap_pupuk_mingguan_screen.dart';
+import 'rekap_nutrisi_screen.dart';
+import 'kasir_screen.dart';
+import 'laporan_transaksi_screen.dart';
+
 import 'laporan_kegagalan_panen_screen.dart';
-import 'laporan_penjualan_screen.dart';
-import 'laporan_menu_screen.dart';
+import 'laporan_catatan_pembenihan_screen.dart';
+import '../debug/permission_test.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -49,6 +53,14 @@ class HomeScreen extends StatelessWidget {
                         ),
                       );
                     }
+                  } else if (value == 'debug_permission') {
+                    if (context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const PermissionTestScreen(),
+                        ),
+                      );
+                    }
                   }
                 },
                 itemBuilder: (context) => [
@@ -59,6 +71,16 @@ class HomeScreen extends StatelessWidget {
                         const Icon(Icons.person),
                         const SizedBox(width: 8),
                         Text(authProvider.user?.namaLengkap ?? 'Profile'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'debug_permission',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bug_report, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        const Text('Debug Permission'),
                       ],
                     ),
                   ),
@@ -290,32 +312,32 @@ class HomeScreen extends StatelessWidget {
                                   );
                                 },
                               ),
-                              _buildMenuCard(
-                                context,
-                                'Catatan Aktivitas',
-                                Icons.note_alt,
-                                Colors.teal,
-                                () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const CatatanPerlakuanScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _buildMenuCard(
-                                context,
-                                'Kegagalan Panen',
-                                Icons.warning_amber,
-                                Colors.red,
-                                () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const KegagalanPanenScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
+                              // _buildMenuCard(
+                              //   context,
+                              //   'Catatan Aktivitas',
+                              //   Icons.note_alt,
+                              //   Colors.teal,
+                              //   () {
+                              //     Navigator.of(context).push(
+                              //       MaterialPageRoute(
+                              //         builder: (context) => const CatatanPerlakuanScreen(),
+                              //       ),
+                              //     );
+                              //   },
+                              // ),
+                              // _buildMenuCard(
+                              //   context,
+                              //   'Kegagalan Panen',
+                              //   Icons.warning_amber,
+                              //   Colors.red,
+                              //   () {
+                              //     Navigator.of(context).push(
+                              //       MaterialPageRoute(
+                              //         builder: (context) => const KegagalanPanenScreen(),
+                              //       ),
+                              //     );
+                              //   },
+                              // ),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -365,29 +387,29 @@ class HomeScreen extends StatelessWidget {
                                   );
                                 },
                               ),
+                              _buildMenuCard(
+                                context,
+                                'Kondisi Meja',
+                                Icons.table_restaurant,
+                                Colors.amber,
+                                () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const KondisiMejaScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
                             ],
                           ),
                           const SizedBox(height: 24),
                           
                           _buildCategorySection(
                             context,
-                            'Transaksi & Keuangan',
+                            'Keuangan',
                             Icons.attach_money,
                             Colors.green,
                             [
-                              _buildMenuCard(
-                                context,
-                                'Penjualan',
-                                Icons.point_of_sale,
-                                Colors.purple,
-                                () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const PenjualanHarianScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
                               _buildMenuCard(
                                 context,
                                 'Pembelian Benih',
@@ -410,6 +432,19 @@ class HomeScreen extends StatelessWidget {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (context) => const PengeluaranHarianScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              _buildMenuCard(
+                                context,
+                                'Kasir',
+                                Icons.point_of_sale,
+                                Colors.purple,
+                                () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const KasirScreen(),
                                     ),
                                   );
                                 },
@@ -439,56 +474,85 @@ class HomeScreen extends StatelessWidget {
                               // ),
                               _buildMenuCard(
                                 context,
-                                'Rekap Benih Mingguan',
-                                Icons.eco_outlined,
-                                Colors.green,
-                                () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const RekapBenihMingguanScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _buildMenuCard(
-                                context,
-                                'Rekap Pupuk Mingguan',
-                                Icons.water_drop,
+                                'Laporan Transaksi',
+                                Icons.receipt_long,
                                 Colors.blue,
                                 () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (context) => const RekapPupukMingguanScreen(),
+                                      builder: (context) => const LaporanTransaksiScreen(),
                                     ),
                                   );
                                 },
                               ),
+
+                              // _buildMenuCard(
+                              //   context,
+                              //   'Rekap Pupuk Mingguan',
+                              //   Icons.water_drop,
+                              //   Colors.blue,
+                              //   () {
+                              //     Navigator.of(context).push(
+                              //       MaterialPageRoute(
+                              //         builder: (context) => const RekapPupukMingguanScreen(),
+                              //       ),
+                              //     );
+                              //   },
+                              // ),
                               _buildMenuCard(
                                 context,
-                                'Laporan Kegagalan Panen',
+                                'Rekap Nutrisi',
                                 Icons.analytics,
-                                Colors.orange,
+                                Colors.teal,
                                 () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (context) => const LaporanKegagalanPanenScreen(),
+                                      builder: (context) => const RekapNutrisiScreen(),
                                     ),
                                   );
                                 },
                               ),
                               _buildMenuCard(
                                 context,
-                                'Laporan Penjualan',
-                                Icons.bar_chart,
+                                'Laporan Catatan Pembenihan',
+                                Icons.grass,
                                 Colors.green,
                                 () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (context) => const LaporanPenjualanScreen(),
+                                      builder: (context) => const LaporanCatatanPembenihanScreen(),
                                     ),
                                   );
                                 },
                               ),
+                              // _buildMenuCard(
+                              //   context,
+                              //   'Laporan Kegagalan Panen',
+                              //   Icons.analytics,
+                              //   Colors.orange,
+                              //   () {
+                              //     Navigator.of(context).push(
+                              //       MaterialPageRoute(
+                              //         builder: (context) => const LaporanKegagalanPanenScreen(),
+                              //       ),
+                              //     );
+                              //   },
+                              // ),
+                              // _buildMenuCard(
+                              //   context,
+                              //   'Laporan Penjualan',
+                              //   Icons.bar_chart,
+                              //   Colors.green,
+                              //   () {
+                              //     Navigator.of(context).push(
+                              //       MaterialPageRoute(
+                              //         builder: (context) => const LaporanPenjualanScreen(),
+                              //       ),
+                              //     );
+                              //   },
+                              // ),
+
+
                             ],
                           ),
                           const SizedBox(height: 24),

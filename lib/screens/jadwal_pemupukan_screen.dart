@@ -5,8 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../models/jadwal_pemupukan_model.dart';
 import '../providers/jadwal_pemupukan_provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/perlakuan_pupuk_provider.dart';
-import 'perlakuan_pupuk_screen.dart';
+
 
 class JadwalPemupukanScreen extends StatefulWidget {
   const JadwalPemupukanScreen({super.key});
@@ -42,18 +41,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PerlakuanPupukScreen(),
-                ),
-              );
-            },
-            tooltip: 'Kelola Perlakuan Pupuk',
-          ),
+
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -286,7 +274,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Cari perlakuan pupuk...',
+              hintText: 'Cari nama sayur...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -483,68 +471,92 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.science, size: 16, color: Colors.green[700]),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            jadwal.perlakuanPupuk,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                    Consumer<JadwalPemupukanProvider>(
+                      builder: (context, provider, child) {
+                        final displayName = jadwal.getDisplayNamaSayur(provider.penanamanSayurList);
+                        return Row(
+                          children: [
+                            Icon(Icons.eco, size: 16, color: Colors.green[700]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                     Consumer<JadwalPemupukanProvider>(
                       builder: (context, provider, child) {
-                        if (jadwal.idPembenihan != null) {
-                          final namaPembenihan = provider.getCatatanPembenihanName(jadwal.idPembenihan!);
-                          return Column(
-                            children: [
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.eco, size: 16, color: Colors.teal[700]),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Pembenihan: ${namaPembenihan ?? 'Data tidak ditemukan'}',
-                                      style: TextStyle(
-                                        color: Colors.teal[700],
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                        final List<Widget> relationWidgets = [];
+                        
+                        // Show planting relationship
+                        if (jadwal.idPenanaman != null) {
+                          final detailPenanaman = jadwal.getDisplayDetailPenanaman(provider.penanamanSayurList);
+                          relationWidgets.add(
+                            Row(
+                              children: [
+                                Icon(Icons.agriculture, size: 16, color: Colors.blue[700]),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Penanaman: $detailPenanaman',
+                                    style: TextStyle(
+                                      color: Colors.blue[700],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           );
                         }
-                        return const SizedBox.shrink();
+                        
+                        // Show seeding relationship
+                        if (jadwal.idPembenihan != null) {
+                          final namaPembenihan = provider.getCatatanPembenihanName(jadwal.idPembenihan!);
+                          relationWidgets.add(
+                            Row(
+                              children: [
+                                Icon(Icons.eco, size: 16, color: Colors.teal[700]),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Pembenihan: ${namaPembenihan ?? 'Data tidak ditemukan'}',
+                                    style: TextStyle(
+                                      color: Colors.teal[700],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        
+                        if (relationWidgets.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        return Column(
+                          children: [
+                            const SizedBox(height: 8),
+                            ...relationWidgets.map((widget) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: widget,
+                            )),
+                          ],
+                        );
                       },
                     ),
-                    if (jadwal.perlakuanTambahan != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.add_circle, size: 16, color: Colors.blue[700]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              jadwal.perlakuanTambahan!,
-                              style: TextStyle(
-                                color: Colors.blue[700],
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+
                     if (jadwal.catatan != null) ...[
                       const SizedBox(height: 8),
                       Row(
@@ -674,9 +686,9 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
     DateTime selectedBulanTahun = jadwal?.bulanTahun ?? _selectedMonth;
     int selectedMinggu = jadwal?.mingguKe ?? 1;
     int selectedHari = jadwal?.hariDalamMinggu ?? 1;
-    String selectedPerlakuan = jadwal?.perlakuanPupuk ?? '';
+    String namaSayur = jadwal?.namaSayur ?? '';
     String? selectedPembenihan = jadwal?.idPembenihan;
-    String perlakuanTambahan = jadwal?.perlakuanTambahan ?? '';
+    String? selectedPenanaman = jadwal?.idPenanaman;
     String catatan = jadwal?.catatan ?? '';
 
     showDialog(
@@ -770,41 +782,20 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Perlakuan Pupuk
-                  Consumer<PerlakuanPupukProvider>(
-                    builder: (context, provider, child) {
-                      final activePerlakuan = provider.activePerlakuanPupukList;
-                      
-                      // Validasi selectedPerlakuan
-                      if (selectedPerlakuan.isNotEmpty && 
-                          !activePerlakuan.any((p) => p.namaPerlakuan == selectedPerlakuan)) {
-                        selectedPerlakuan = '';
+                  // Nama Sayur
+                  TextFormField(
+                    initialValue: namaSayur,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Sayur',
+                      border: OutlineInputBorder(),
+                      hintText: 'Masukkan nama sayur yang akan dipupuk',
+                    ),
+                    onChanged: (value) => namaSayur = value,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Nama sayur harus diisi';
                       }
-                      
-                      return DropdownButtonFormField<String>(
-                        value: selectedPerlakuan.isEmpty ? null : selectedPerlakuan,
-                        decoration: const InputDecoration(
-                          labelText: 'Perlakuan Pupuk',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: activePerlakuan.map((perlakuan) =>
-                          DropdownMenuItem(
-                            value: perlakuan.namaPerlakuan,
-                            child: Text(perlakuan.displayName),
-                          ),
-                        ).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedPerlakuan = value ?? '';
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Pilih perlakuan pupuk';
-                          }
-                          return null;
-                        },
-                      );
+                      return null;
                     },
                   ),
                   const SizedBox(height: 16),
@@ -843,14 +834,38 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Perlakuan Tambahan
-                  TextFormField(
-                    initialValue: perlakuanTambahan,
-                    decoration: const InputDecoration(
-                      labelText: 'Perlakuan Tambahan (Opsional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) => perlakuanTambahan = value,
+                  // Penanaman Sayur Terkait
+                  Consumer<JadwalPemupukanProvider>(
+                    builder: (context, provider, child) {
+                      final activePenanaman = provider.getActivePenanamanSayur();
+                      
+                      return DropdownButtonFormField<String>(
+                        value: selectedPenanaman,
+                        decoration: const InputDecoration(
+                          labelText: 'Penanaman Sayur Terkait (Opsional)',
+                          border: OutlineInputBorder(),
+                          hintText: 'Pilih penanaman sayur yang akan dipupuk',
+                        ),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Tidak terkait dengan penanaman'),
+                          ),
+                          ...activePenanaman.map((penanaman) {
+                            final displayName = provider.getPenanamanSayurName(penanaman.idPenanaman);
+                            return DropdownMenuItem<String>(
+                              value: penanaman.idPenanaman,
+                              child: Text(displayName),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedPenanaman = value;
+                          });
+                        },
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   
@@ -885,9 +900,9 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                         'bulan_tahun': selectedBulanTahun,
                         'minggu_ke': selectedMinggu,
                         'hari_dalam_minggu': selectedHari,
-                        'perlakuan_pupuk': selectedPerlakuan,
+                        'nama_sayur': namaSayur,
                         'id_pembenihan': selectedPembenihan,
-                        'perlakuan_tambahan': perlakuanTambahan.isEmpty ? null : perlakuanTambahan,
+                        'id_penanaman': selectedPenanaman,
                         'catatan': catatan.isEmpty ? null : catatan,
                       },
                     );
@@ -896,9 +911,9 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                       bulanTahun: selectedBulanTahun,
                       mingguKe: selectedMinggu,
                       hariDalamMinggu: selectedHari,
-                      perlakuanPupuk: selectedPerlakuan,
+                      namaSayur: namaSayur,
                       idPembenihan: selectedPembenihan,
-                      perlakuanTambahan: perlakuanTambahan.isEmpty ? null : perlakuanTambahan,
+                      idPenanaman: selectedPenanaman,
                       catatan: catatan.isEmpty ? null : catatan,
                     );
                   }
@@ -943,7 +958,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
               _buildDetailRow('Minggu', 'Minggu ke-${jadwal.mingguKe}'),
               _buildDetailRow('Hari', JadwalPemupukanModel.getNamaHari(jadwal.hariDalamMinggu)),
               _buildDetailRow('Tanggal Target', DateFormat('dd MMMM yyyy', 'id_ID').format(jadwal.getTanggalTarget())),
-              _buildDetailRow('Perlakuan Pupuk', jadwal.perlakuanPupuk),
+              _buildDetailRow('Nama Sayur', jadwal.namaSayur),
               Consumer<JadwalPemupukanProvider>(
                 builder: (context, provider, child) {
                   if (jadwal.idPembenihan != null) {
@@ -953,8 +968,7 @@ class _JadwalPemupukanScreenState extends State<JadwalPemupukanScreen> {
                   return const SizedBox.shrink();
                 },
               ),
-              if (jadwal.perlakuanTambahan != null)
-                _buildDetailRow('Perlakuan Tambahan', jadwal.perlakuanTambahan!),
+
               if (jadwal.catatan != null)
                 _buildDetailRow('Catatan', jadwal.catatan!),
               _buildDetailRow('Status', JadwalPemupukanModel.getStatusText(jadwal.sudahSelesai)),

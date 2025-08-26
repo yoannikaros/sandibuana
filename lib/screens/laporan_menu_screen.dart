@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'laporan_kegagalan_panen_screen.dart';
-import 'laporan_penjualan_screen.dart';
+
 
 class LaporanMenuScreen extends StatelessWidget {
   const LaporanMenuScreen({Key? key}) : super(key: key);
@@ -100,22 +100,7 @@ class LaporanMenuScreen extends StatelessWidget {
                     ),
                     
                     // Laporan Penjualan
-                    _buildMenuCard(
-                      context,
-                      title: 'Laporan Penjualan',
-                      subtitle: 'Analisis penjualan & pendapatan',
-                      icon: Icons.trending_up,
-                      color: Colors.blue,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LaporanPenjualanScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    
+                  
                     // Laporan Produksi (Coming Soon)
                     _buildMenuCard(
                       context,
@@ -154,6 +139,8 @@ class LaporanMenuScreen extends StatelessWidget {
                         _showComingSoonDialog(context, 'Laporan Inventori');
                       },
                     ),
+                    
+
                     
                     // Laporan Performa (Coming Soon)
                     _buildMenuCard(

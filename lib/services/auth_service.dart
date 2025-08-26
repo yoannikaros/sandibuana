@@ -1,11 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  AuthService() {
+    // Set persistence hanya untuk platform web
+    // setPersistence() tidak didukung di platform mobile
+    // _auth.setPersistence(Persistence.LOCAL);
+  }
 
   // Stream untuk mendengarkan perubahan status authentication
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -61,7 +66,17 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      throw Exception('Gagal mendaftar: ${e.toString()}');
+      print('Register error: $e');
+      if (e.toString().contains('permission-denied')) {
+        throw Exception('Akses ditolak. Pastikan Firestore rules sudah dikonfigurasi dengan benar.');
+      } else if (e.toString().contains('email-already-in-use')) {
+        throw Exception('Email sudah digunakan oleh akun lain.');
+      } else if (e.toString().contains('weak-password')) {
+        throw Exception('Password terlalu lemah. Gunakan minimal 6 karakter.');
+      } else if (e.toString().contains('invalid-email')) {
+        throw Exception('Format email tidak valid.');
+      }
+      throw Exception('Gagal mendaftar: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -85,15 +100,24 @@ class AuthService {
           await signOut();
           throw Exception('Akun Anda tidak aktif. Hubungi administrator.');
         }
-
-        // Simpan status login
-        await _saveLoginStatus(true);
         
         return userData;
       }
       return null;
     } catch (e) {
-      throw Exception('Gagal masuk: ${e.toString()}');
+      print('Login error: $e');
+      if (e.toString().contains('permission-denied')) {
+        throw Exception('Akses ditolak. Pastikan Firestore rules sudah dikonfigurasi dengan benar.');
+      } else if (e.toString().contains('user-not-found')) {
+        throw Exception('Email tidak terdaftar.');
+      } else if (e.toString().contains('wrong-password')) {
+        throw Exception('Password salah.');
+      } else if (e.toString().contains('invalid-email')) {
+        throw Exception('Format email tidak valid.');
+      } else if (e.toString().contains('user-disabled')) {
+        throw Exception('Akun telah dinonaktifkan.');
+      }
+      throw Exception('Gagal masuk: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -127,13 +151,24 @@ class AuthService {
         password: password,
       );
     } catch (e) {
-      throw Exception('Gagal masuk: ${e.toString()}');
+      print('Login with username error: $e');
+      if (e.toString().contains('permission-denied')) {
+        throw Exception('Akses ditolak. Pastikan Firestore rules sudah dikonfigurasi dengan benar.');
+      } else if (e.toString().contains('user-not-found')) {
+        throw Exception('Username tidak ditemukan.');
+      }
+      throw Exception('Gagal masuk: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
   // Ambil data user dari Firestore
   Future<UserModel?> getUserData(String uid) async {
     try {
+      // Pastikan user sudah terautentikasi sebelum mengakses Firestore
+      if (_auth.currentUser == null) {
+        throw Exception('User tidak terautentikasi');
+      }
+      
       DocumentSnapshot doc = await _firestore.collection('pengguna').doc(uid).get();
       
       if (doc.exists) {
@@ -142,6 +177,10 @@ class AuthService {
       return null;
     } catch (e) {
       print('Error getting user data: $e');
+      if (e.toString().contains('permission-denied')) {
+        print('Permission denied - pastikan Firestore rules sudah benar dan user terautentikasi');
+        throw Exception('Akses ditolak. Pastikan Anda sudah login dan memiliki izin akses.');
+      }
       return null;
     }
   }
@@ -169,22 +208,9 @@ class AuthService {
   Future<void> signOut() async {
     try {
       await _auth.signOut();
-      await _saveLoginStatus(false);
     } catch (e) {
       throw Exception('Gagal keluar: ${e.toString()}');
     }
-  }
-
-  // Simpan status login ke SharedPreferences
-  Future<void> _saveLoginStatus(bool isLoggedIn) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', isLoggedIn);
-  }
-
-  // Cek status login dari SharedPreferences
-  Future<bool> isLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('isLoggedIn') ?? false;
   }
 
   // Validasi email

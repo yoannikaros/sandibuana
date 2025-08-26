@@ -383,14 +383,6 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
                         Icons.trending_up,
                       ),
                     ),
-                  ] else ...[
-                    Expanded(
-                      child: _buildInfoItem(
-                        'Lokasi',
-                        penanaman.lokasi ?? 'Tidak ada',
-                        Icons.location_on,
-                      ),
-                    ),
                   ],
                   Expanded(
                     child: _buildInfoItem(
@@ -412,47 +404,48 @@ class _PenanamanSayurScreenState extends State<PenanamanSayurScreen> {
                   ),
                 ),
               ],
-              if (penanaman.catatan != null && penanaman.catatan!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Catatan: ${penanaman.catatan}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (penanaman.tahapPertumbuhan != 'panen' && penanaman.tahapPertumbuhan != 'gagal')
-                    TextButton.icon(
-                      onPressed: () => _showUpdateTahapDialog(penanaman),
-                      icon: const Icon(Icons.update, size: 16),
-                      label: const Text('Update Tahap'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.blue),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    if (penanaman.tahapPertumbuhan != 'panen' && penanaman.tahapPertumbuhan != 'gagal')
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: TextButton.icon(
+                          onPressed: () => _showUpdateTahapDialog(penanaman),
+                          icon: const Icon(Icons.update, size: 16),
+                          label: const Text('Update Tahap'),
+                          style: TextButton.styleFrom(foregroundColor: Colors.blue),
+                        ),
+                      ),
+                    if (penanaman.tahapPertumbuhan == 'siap_panen')
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: TextButton.icon(
+                          onPressed: () => _showPanenDialog(penanaman),
+                          icon: const Icon(Icons.agriculture, size: 16),
+                          label: const Text('Panen'),
+                          style: TextButton.styleFrom(foregroundColor: Colors.green),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: TextButton.icon(
+                        onPressed: () => _showEditDialog(penanaman),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                      ),
                     ),
-                  if (penanaman.tahapPertumbuhan == 'siap_panen')
                     TextButton.icon(
-                      onPressed: () => _showPanenDialog(penanaman),
-                      icon: const Icon(Icons.agriculture, size: 16),
-                      label: const Text('Panen'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.green),
+                      onPressed: () => _showDeleteConfirmation(penanaman),
+                      icon: const Icon(Icons.delete, size: 16),
+                      label: const Text('Hapus'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
                     ),
-                  TextButton.icon(
-                    onPressed: () => _showEditDialog(penanaman),
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.orange),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _showDeleteConfirmation(penanaman),
-                    icon: const Icon(Icons.delete, size: 16),
-                    label: const Text('Hapus'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -637,8 +630,6 @@ class _AddPenanamanDialogState extends State<_AddPenanamanDialog> {
   final _jenisSayurController = TextEditingController();
   final _jumlahDitanamController = TextEditingController();
   final _hargaController = TextEditingController();
-  final _lokasiController = TextEditingController();
-  final _catatanController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   String? _selectedPembenihanId;
 
@@ -741,14 +732,15 @@ class _AddPenanamanDialogState extends State<_AddPenanamanDialog> {
                         child: Text('Tidak terkait dengan batch'),
                       ),
                       ...provider.catatanPembenihanList.map((catatan) {
+                        final namaBenih = provider.getNamaBenihById(catatan.idBenih);
                         return DropdownMenuItem<String>(
                           value: catatan.idPembenihan,
                           child: Text(
-                            'Batch: ${catatan.kodeBatch ?? 'N/A'} - ${DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai)}',
+                            '$namaBenih - ${DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai)}',
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                     onChanged: (value) {
                       setState(() {
@@ -758,24 +750,7 @@ class _AddPenanamanDialogState extends State<_AddPenanamanDialog> {
                   );
                 }),
                 const SizedBox(height: 16),
-                // Lokasi
-                TextFormField(
-                  controller: _lokasiController,
-                  decoration: const InputDecoration(
-                    labelText: 'Lokasi (Opsional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Catatan
-                TextFormField(
-                  controller: _catatanController,
-                  decoration: const InputDecoration(
-                    labelText: 'Catatan (Opsional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
+
               ],
             ),
           ),
@@ -799,8 +774,6 @@ class _AddPenanamanDialogState extends State<_AddPenanamanDialog> {
                         jenisSayur: _jenisSayurController.text,
                         jumlahDitanam: int.parse(_jumlahDitanamController.text),
                         harga: _hargaController.text.isNotEmpty ? double.parse(_hargaController.text) : null,
-                        lokasi: _lokasiController.text.isNotEmpty ? _lokasiController.text : null,
-                        catatan: _catatanController.text.isNotEmpty ? _catatanController.text : null,
                         dicatatOleh: authProvider.user?.idPengguna ?? '',
                       );
 
@@ -848,8 +821,6 @@ class _EditPenanamanDialogState extends State<_EditPenanamanDialog> {
   late TextEditingController _jenisSayurController;
   late TextEditingController _jumlahDitanamController;
   late TextEditingController _hargaController;
-  late TextEditingController _lokasiController;
-  late TextEditingController _catatanController;
   late DateTime _selectedDate;
   String? _selectedPembenihanId;
 
@@ -859,8 +830,6 @@ class _EditPenanamanDialogState extends State<_EditPenanamanDialog> {
     _jenisSayurController = TextEditingController(text: widget.penanaman.jenisSayur);
     _jumlahDitanamController = TextEditingController(text: widget.penanaman.jumlahDitanam.toString());
     _hargaController = TextEditingController(text: widget.penanaman.harga?.toString() ?? '');
-    _lokasiController = TextEditingController(text: widget.penanaman.lokasi ?? '');
-    _catatanController = TextEditingController(text: widget.penanaman.catatan ?? '');
     _selectedDate = widget.penanaman.tanggalTanam;
     _selectedPembenihanId = widget.penanaman.idPembenihan;
   }
@@ -964,14 +933,15 @@ class _EditPenanamanDialogState extends State<_EditPenanamanDialog> {
                         child: Text('Tidak terkait dengan batch'),
                       ),
                       ...provider.catatanPembenihanList.map((catatan) {
+                        final namaBenih = provider.getNamaBenihById(catatan.idBenih);
                         return DropdownMenuItem<String>(
                           value: catatan.idPembenihan,
                           child: Text(
-                            'Batch: ${catatan.kodeBatch ?? 'N/A'} - ${DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai)}',
+                            '$namaBenih - ${DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai)}',
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                     onChanged: (value) {
                       setState(() {
@@ -980,25 +950,6 @@ class _EditPenanamanDialogState extends State<_EditPenanamanDialog> {
                     },
                   );
                 }),
-                const SizedBox(height: 16),
-                // Lokasi
-                TextFormField(
-                  controller: _lokasiController,
-                  decoration: const InputDecoration(
-                    labelText: 'Lokasi (Opsional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Catatan
-                TextFormField(
-                  controller: _catatanController,
-                  decoration: const InputDecoration(
-                    labelText: 'Catatan (Opsional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
               ],
             ),
           ),
@@ -1021,8 +972,6 @@ class _EditPenanamanDialogState extends State<_EditPenanamanDialog> {
                         'jumlah_ditanam': int.parse(_jumlahDitanamController.text),
                         'harga': _hargaController.text.isNotEmpty ? double.parse(_hargaController.text) : null,
                         'id_pembenihan': _selectedPembenihanId,
-                        'lokasi': _lokasiController.text.isNotEmpty ? _lokasiController.text : null,
-                        'catatan': _catatanController.text.isNotEmpty ? _catatanController.text : null,
                       };
 
                       final success = await provider.updatePenanamanSayur(
@@ -1083,8 +1032,6 @@ class _DetailPenanamanDialog extends StatelessWidget {
               if (penanaman.harga != null)
                 _buildDetailRow('Harga per Unit', 'Rp ${penanaman.harga!.toStringAsFixed(0)}'),
               _buildDetailRow('Tahap Pertumbuhan', provider.getTahapPertumbuhanDisplayName(penanaman.tahapPertumbuhan)),
-              if (penanaman.lokasi != null)
-                _buildDetailRow('Lokasi', penanaman.lokasi!),
               if (penanaman.idPembenihan != null)
                 _buildDetailRow('Batch Pembenihan', provider.getCatatanPembenihanName(penanaman.idPembenihan)),
               if (penanaman.tanggalPanen != null)
@@ -1096,8 +1043,6 @@ class _DetailPenanamanDialog extends StatelessWidget {
               ],
               if (penanaman.alasanGagal != null && penanaman.alasanGagal!.isNotEmpty)
                 _buildDetailRow('Alasan Gagal', penanaman.alasanGagal!),
-              if (penanaman.catatan != null && penanaman.catatan!.isNotEmpty)
-                _buildDetailRow('Catatan', penanaman.catatan!),
               const SizedBox(height: 16),
               Text(
                 'Dicatat pada: ${DateFormat('dd/MM/yyyy HH:mm').format(penanaman.dicatatPada)}',

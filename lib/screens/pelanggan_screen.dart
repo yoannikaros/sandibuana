@@ -6,6 +6,7 @@ import '../models/pelanggan_model.dart';
 import '../providers/pelanggan_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/jenis_pelanggan_provider.dart';
+
 import 'jenis_pelanggan_screen.dart';
 
 class PelangganScreen extends StatefulWidget {
@@ -15,24 +16,58 @@ class PelangganScreen extends StatefulWidget {
   State<PelangganScreen> createState() => _PelangganScreenState();
 }
 
-class _PelangganScreenState extends State<PelangganScreen> {
+class _PelangganScreenState extends State<PelangganScreen> with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   String? _selectedJenis;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Initialize Indonesian locale for DateFormat
     initializeDateFormatting('id_ID', null);
     // Load data saat screen pertama kali dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final pelangganProvider = Provider.of<PelangganProvider>(context, listen: false);
-      pelangganProvider.loadPelangganAktif();
+      _initializeData();
     });
   }
 
+  Future<void> _initializeData() async {
+    try {
+      final pelangganProvider = Provider.of<PelangganProvider>(context, listen: false);
+      await pelangganProvider.loadPelangganAktif();
+      // Enable real-time updates
+      pelangganProvider.listenToRealtimeUpdates();
+
+    } catch (e) {
+      print('Error initializing pelanggan data: $e');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Auto refresh when app becomes active
+      _refreshData();
+    }
+  }
+
+  void _refreshData() async {
+    try {
+      final pelangganProvider = Provider.of<PelangganProvider>(context, listen: false);
+      await pelangganProvider.loadPelangganAktif();
+
+    } catch (e) {
+      print('Error refreshing data: $e');
+    }
+  }
+
+
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
   }
@@ -42,10 +77,11 @@ class _PelangganScreenState extends State<PelangganScreen> {
     final formKey = GlobalKey<FormState>();
     
     final namaController = TextEditingController(text: pelanggan?.namaPelanggan ?? '');
+    final namaTempatUsahaController = TextEditingController(text: pelanggan?.namaTempatUsaha ?? '');
     final kontakController = TextEditingController(text: pelanggan?.kontakPerson ?? '');
     final teleponController = TextEditingController(text: pelanggan?.telepon ?? '');
     final alamatController = TextEditingController(text: pelanggan?.alamat ?? '');
-    String selectedJenis = pelanggan?.jenisPelanggan ?? 'restoran';
+    String? selectedJenis = pelanggan?.jenisPelanggan;
 
     showDialog(
       context: context,
@@ -78,8 +114,8 @@ class _PelangganScreenState extends State<PelangganScreen> {
                       final jenisPelangganDisplayOptions = jenisPelangganProvider.jenisPelangganDisplayOptions;
                       
                       // Ensure selectedJenis is valid
-                      if (!jenisPelangganOptions.contains(selectedJenis) && jenisPelangganOptions.isNotEmpty) {
-                        selectedJenis = jenisPelangganOptions.first;
+                      if (selectedJenis == null || !jenisPelangganOptions.contains(selectedJenis)) {
+                        selectedJenis = jenisPelangganOptions.isNotEmpty ? jenisPelangganOptions.first : 'restoran';
                       }
                       
                       return DropdownButtonFormField<String>(
@@ -98,7 +134,7 @@ class _PelangganScreenState extends State<PelangganScreen> {
                             .toList(),
                         onChanged: (value) {
                           setState(() {
-                            selectedJenis = value!;
+                            selectedJenis = value;
                           });
                         },
                         validator: (value) {
@@ -109,6 +145,14 @@ class _PelangganScreenState extends State<PelangganScreen> {
                         },
                       );
                     },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: namaTempatUsahaController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Tempat Usaha',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -153,7 +197,8 @@ class _PelangganScreenState extends State<PelangganScreen> {
                   final newPelanggan = PelangganModel(
                     id: pelanggan?.id ?? '',
                     namaPelanggan: namaController.text,
-                    jenisPelanggan: selectedJenis,
+                    jenisPelanggan: selectedJenis ?? 'restoran',
+                    namaTempatUsaha: namaTempatUsahaController.text.isEmpty ? null : namaTempatUsahaController.text,
                     kontakPerson: kontakController.text.isEmpty ? null : kontakController.text,
                     telepon: teleponController.text.isEmpty ? null : teleponController.text,
                     alamat: alamatController.text.isEmpty ? null : alamatController.text,
@@ -267,9 +312,70 @@ class _PelangganScreenState extends State<PelangganScreen> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.sync),
+            tooltip: 'Sinkronisasi Firebase',
+            onPressed: () async {
+              final pelangganProvider = context.read<PelangganProvider>();
+              
+              // Show loading indicator
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Text('Menyinkronkan data...'),
+                    ],
+                  ),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+              
+              try {
+                // Force refresh from Firebase
+                await pelangganProvider.forceRefresh();
+                
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Data berhasil disinkronkan dengan Firebase'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal sinkronisasi: $e'),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              context.read<PelangganProvider>().loadPelangganAktif();
+            tooltip: 'Refresh Data',
+            onPressed: () async {
+              final pelangganProvider = context.read<PelangganProvider>();
+              await pelangganProvider.loadPelangganAktif();
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Data berhasil diperbarui'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
           ),
         ],
@@ -367,6 +473,8 @@ class _PelangganScreenState extends State<PelangganScreen> {
                 ),
               ),
               
+              // Sync Status Indicator removed
+              
               // Content
               Expanded(
                 child: pelangganProvider.isLoading
@@ -388,12 +496,33 @@ class _PelangganScreenState extends State<PelangganScreen> {
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    pelangganProvider.clearError();
-                                    pelangganProvider.loadPelangganAktif();
-                                  },
-                                  child: const Text('Coba Lagi'),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        pelangganProvider.clearError();
+                                        pelangganProvider.loadPelangganAktif();
+                                      },
+                                      child: const Text('Coba Lagi'),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    ElevatedButton.icon(
+                                      onPressed: () async {
+                                        try {
+                                          await pelangganProvider.forceRefresh();
+                                        } catch (e) {
+                                          // Error handled by provider
+                                        }
+                                      },
+                                      icon: const Icon(Icons.sync),
+                                      label: const Text('Sync Firebase'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -449,6 +578,8 @@ class _PelangganScreenState extends State<PelangganScreen> {
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
+                                          if (pelanggan.namaTempatUsaha != null)
+                                            Text('Tempat Usaha: ${pelanggan.namaTempatUsaha}'),
                                           if (pelanggan.kontakPerson != null)
                                             Text('Kontak: ${pelanggan.kontakPerson}'),
                                           if (pelanggan.telepon != null)
@@ -505,6 +636,60 @@ class _PelangganScreenState extends State<PelangganScreen> {
             ],
           );
         },
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          border: Border(top: BorderSide(color: Colors.grey[300]!)),
+        ),
+        child: Consumer<PelangganProvider>(
+          builder: (context, pelangganProvider, child) {
+            final totalPelanggan = pelangganProvider.pelangganList.length;
+            
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.people,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$totalPelanggan pelanggan',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Icon(
+                      pelangganProvider.error == null ? Icons.check_circle : Icons.error,
+                      size: 16,
+                      color: pelangganProvider.error == null ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      pelangganProvider.error == null 
+                          ? 'Tersinkronisasi'
+                          : 'Error sinkronisasi',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: pelangganProvider.error == null ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(),

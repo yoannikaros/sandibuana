@@ -1,145 +1,120 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/cart_item_model.dart';
-import '../services/cart_service.dart';
+import '../models/penanaman_sayur_model.dart';
 
 class CartProvider with ChangeNotifier {
-  final CartService _cartService = CartService();
-  List<CartItem> _cartItems = [];
-  bool _isLoading = false;
+  List<CartItemModel> _cartItems = [];
+  String? _selectedPelangganId;
+  String? _selectedPelangganName;
 
-  List<CartItem> get items => _cartItems;
-  List<CartItem> get cartItems => _cartItems;
-  bool get isLoading => _isLoading;
+  // Getters
+  List<CartItemModel> get cartItems => _cartItems;
+  String? get selectedPelangganId => _selectedPelangganId;
+  String? get selectedPelangganName => _selectedPelangganName;
   
-  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + item.total);
-  int get itemCount => _cartItems.length;
-  int get totalQuantity => _cartItems.fold(0, (sum, item) => sum + item.jumlah.toInt());
+  double get totalItems => _cartItems.fold(0.0, (sum, item) => sum + item.jumlah);
+  double get totalHarga => _cartItems.fold(0.0, (sum, item) => sum + item.totalHarga);
+  bool get isCartEmpty => _cartItems.isEmpty;
 
-  // Load cart items from database
-  Future<void> loadCartItems() async {
-    _isLoading = true;
+  // Set selected pelanggan
+  void setSelectedPelanggan(String? pelangganId, String? pelangganName) {
+    _selectedPelangganId = pelangganId;
+    _selectedPelangganName = pelangganName;
     notifyListeners();
-
-    try {
-      _cartItems = await _cartService.getCartItems();
-    } catch (e) {
-      debugPrint('Error loading cart items: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   // Add item to cart
-  Future<void> addToCart({
-    required String jenisSayur,
-    required double harga,
-    required double jumlah,
-    required String satuan,
-  }) async {
-    try {
-      final cartItem = CartItem(
+  void addToCart(PenanamanSayurModel penanaman, double jumlah, String satuan) {
+    if (penanaman.harga == null || penanaman.harga! <= 0) {
+      throw Exception('Harga sayur belum ditentukan');
+    }
+
+    final existingIndex = _cartItems.indexWhere(
+      (item) => item.idPenanaman == penanaman.idPenanaman,
+    );
+
+    if (existingIndex >= 0) {
+      // Update existing item
+      final existingItem = _cartItems[existingIndex];
+      final newJumlah = existingItem.jumlah + jumlah;
+      final newTotalHarga = newJumlah * penanaman.harga!;
+      
+      _cartItems[existingIndex] = existingItem.copyWith(
+        jumlah: newJumlah,
+        totalHarga: newTotalHarga,
+      );
+    } else {
+      // Add new item
+      final cartItem = CartItemModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        jenisSayur: jenisSayur,
-        harga: harga,
+        idPenanaman: penanaman.idPenanaman,
+        jenisSayur: penanaman.jenisSayur,
+        harga: penanaman.harga!,
         jumlah: jumlah,
         satuan: satuan,
-        total: harga * jumlah,
-        addedAt: DateTime.now(),
+        totalHarga: jumlah * penanaman.harga!,
       );
-
-      await _cartService.addToCart(cartItem);
-      await loadCartItems();
-    } catch (e) {
-      debugPrint('Error adding to cart: $e');
-      rethrow;
+      _cartItems.add(cartItem);
     }
-  }
-
-  // Add CartItem directly to cart
-  Future<void> addItem(CartItem cartItem) async {
-    try {
-      await _cartService.addToCart(cartItem);
-      await loadCartItems();
-    } catch (e) {
-      debugPrint('Error adding item to cart: $e');
-      rethrow;
-    }
+    
+    notifyListeners();
   }
 
   // Update item quantity
-  Future<void> updateItemQuantity(String itemId, double newQuantity) async {
-    try {
-      final itemIndex = _cartItems.indexWhere((item) => item.id == itemId);
-      if (itemIndex != -1) {
-        final item = _cartItems[itemIndex];
-        final updatedItem = item.copyWith(
-          jumlah: newQuantity,
-          total: item.harga * newQuantity,
-        );
-        
-        await _cartService.updateCartItem(updatedItem);
-        await loadCartItems();
-      }
-    } catch (e) {
-      debugPrint('Error updating item quantity: $e');
-      rethrow;
+  void updateItemQuantity(String cartItemId, double newJumlah) {
+    if (newJumlah <= 0) {
+      removeFromCart(cartItemId);
+      return;
+    }
+
+    final index = _cartItems.indexWhere((item) => item.id == cartItemId);
+    if (index >= 0) {
+      final item = _cartItems[index];
+      _cartItems[index] = item.copyWith(
+        jumlah: newJumlah,
+        totalHarga: newJumlah * item.harga,
+      );
+      notifyListeners();
     }
   }
 
   // Remove item from cart
-  Future<void> removeFromCart(String itemId) async {
-    try {
-      await _cartService.removeFromCart(itemId);
-      await loadCartItems();
-    } catch (e) {
-      debugPrint('Error removing from cart: $e');
-      rethrow;
-    }
+  void removeFromCart(String cartItemId) {
+    _cartItems.removeWhere((item) => item.id == cartItemId);
+    notifyListeners();
   }
 
-  // Remove item from cart by id
-  Future<void> removeItem(String itemId) async {
-    try {
-      await _cartService.removeFromCart(itemId);
-      await loadCartItems();
-    } catch (e) {
-      debugPrint('Error removing item from cart: $e');
-      rethrow;
-    }
+  // Clear cart
+  void clearCart() {
+    _cartItems.clear();
+    _selectedPelangganId = null;
+    _selectedPelangganName = null;
+    notifyListeners();
   }
 
-  // Clear all items from cart
-  Future<void> clearCart() async {
+  // Get cart item by ID
+  CartItemModel? getCartItemById(String cartItemId) {
     try {
-      await _cartService.clearCart();
-      _cartItems.clear();
-      notifyListeners();
+      return _cartItems.firstWhere((item) => item.id == cartItemId);
     } catch (e) {
-      debugPrint('Error clearing cart: $e');
-      rethrow;
+      return null;
     }
   }
 
   // Check if item exists in cart
-  bool isItemInCart(String jenisSayur) {
-    return _cartItems.any((item) => item.jenisSayur == jenisSayur);
+  bool isItemInCart(String idPenanaman) {
+    return _cartItems.any((item) => item.idPenanaman == idPenanaman);
   }
 
   // Get item quantity in cart
-  double getItemQuantity(String jenisSayur) {
-    final item = _cartItems.firstWhere(
-      (item) => item.jenisSayur == jenisSayur,
-      orElse: () => CartItem(
-        id: '',
-        jenisSayur: '',
-        harga: 0,
-        jumlah: 0,
-        satuan: '',
-        total: 0,
-        addedAt: DateTime.now(),
-      ),
-    );
-    return item.jumlah;
+  double getItemQuantity(String idPenanaman) {
+    try {
+      final item = _cartItems.firstWhere(
+        (item) => item.idPenanaman == idPenanaman,
+      );
+      return item.jumlah;
+    } catch (e) {
+      return 0.0;
+    }
   }
 }

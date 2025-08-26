@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../models/jadwal_pemupukan_model.dart';
 import '../models/catatan_pembenihan_model.dart';
+import '../models/penanaman_sayur_model.dart';
 import '../services/jadwal_pemupukan_service.dart';
 import '../services/benih_service.dart';
+import '../services/penanaman_sayur_service.dart';
 import '../providers/auth_provider.dart';
 
 class JadwalPemupukanProvider with ChangeNotifier {
   final JadwalPemupukanService _service = JadwalPemupukanService();
   final BenihService _benihService = BenihService();
+  final PenanamanSayurService _penanamanSayurService = PenanamanSayurService();
   final AuthProvider _authProvider;
 
   JadwalPemupukanProvider(this._authProvider);
@@ -15,6 +18,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
   List<JadwalPemupukanModel> _jadwalList = [];
   List<JadwalPemupukanModel> _filteredJadwalList = [];
   List<CatatanPembenihanModel> _catatanPembenihanList = [];
+  List<PenanamanSayurModel> _penanamanSayurList = [];
   bool _isLoading = false;
   String? _error;
   DateTime _selectedMonth = DateTime.now();
@@ -27,6 +31,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
   // Getters
   List<JadwalPemupukanModel> get jadwalList => _filteredJadwalList;
   List<CatatanPembenihanModel> get catatanPembenihanList => _catatanPembenihanList;
+  List<PenanamanSayurModel> get penanamanSayurList => _penanamanSayurList;
   bool get isLoading => _isLoading;
   String? get error => _error;
   DateTime get selectedMonth => _selectedMonth;
@@ -41,6 +46,8 @@ class JadwalPemupukanProvider with ChangeNotifier {
     _setLoading(true);
     try {
       _jadwalList = await _service.getAllJadwalPemupukan();
+      await _loadCatatanPembenihan();
+      await _loadPenanamanSayur();
       _applyFilters();
       await _loadStatistik();
       _clearError();
@@ -58,6 +65,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
       _selectedMonth = bulanTahun;
       _jadwalList = await _service.getJadwalPemupukanByBulan(bulanTahun);
       await _loadCatatanPembenihan();
+      await _loadPenanamanSayur();
       _applyFilters();
       await _loadStatistik();
       _clearError();
@@ -73,10 +81,10 @@ class JadwalPemupukanProvider with ChangeNotifier {
     required DateTime bulanTahun,
     required int mingguKe,
     required int hariDalamMinggu,
-    required String perlakuanPupuk,
-    String? perlakuanTambahan,
+    required String namaSayur,
     String? catatan,
     String? idPembenihan,
+    String? idPenanaman,
   }) async {
     try {
       final userId = _authProvider.user?.idPengguna;
@@ -88,10 +96,10 @@ class JadwalPemupukanProvider with ChangeNotifier {
         bulanTahun: bulanTahun,
         mingguKe: mingguKe,
         hariDalamMinggu: hariDalamMinggu,
-        perlakuanPupuk: perlakuanPupuk,
-        perlakuanTambahan: perlakuanTambahan,
+        namaSayur: namaSayur,
         catatan: catatan,
         idPembenihan: idPembenihan,
+        idPenanaman: idPenanaman,
         dibuatOleh: userId,
       );
 
@@ -263,8 +271,7 @@ class JadwalPemupukanProvider with ChangeNotifier {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        if (!jadwal.perlakuanPupuk.toLowerCase().contains(query) &&
-            !(jadwal.perlakuanTambahan?.toLowerCase().contains(query) ?? false) &&
+        if (!jadwal.namaSayur.toLowerCase().contains(query) &&
             !(jadwal.catatan?.toLowerCase().contains(query) ?? false)) {
           return false;
         }
@@ -428,6 +435,42 @@ class JadwalPemupukanProvider with ChangeNotifier {
   List<CatatanPembenihanModel> getActiveCatatanPembenihan() {
     return _catatanPembenihanList
         .where((catatan) => catatan.status == 'berjalan')
+        .toList();
+  }
+
+  // Load penanaman sayur
+  Future<void> _loadPenanamanSayur() async {
+    try {
+      _penanamanSayurList = await _penanamanSayurService.getAllPenanamanSayur();
+    } catch (e) {
+      // Jika gagal load penanaman sayur, set list kosong
+      _penanamanSayurList = [];
+    }
+  }
+
+  // Get penanaman sayur name by ID
+  String getPenanamanSayurName(String? idPenanaman) {
+    if (idPenanaman == null || idPenanaman.isEmpty) {
+      return 'Tidak terkait';
+    }
+    
+    try {
+      final penanaman = _penanamanSayurList.firstWhere(
+        (penanaman) => penanaman.idPenanaman == idPenanaman,
+      );
+      return '${penanaman.jenisSayur} (${penanaman.tahapPertumbuhan})';
+    } catch (e) {
+      return 'Penanaman tidak ditemukan';
+    }
+  }
+
+  // Get active penanaman sayur (tahap berjalan, vegetatif, siap_panen)
+  List<PenanamanSayurModel> getActivePenanamanSayur() {
+    return _penanamanSayurList
+        .where((penanaman) => 
+            penanaman.tahapPertumbuhan == 'semai' ||
+            penanaman.tahapPertumbuhan == 'vegetatif' ||
+            penanaman.tahapPertumbuhan == 'siap_panen')
         .toList();
   }
 

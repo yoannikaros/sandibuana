@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/monitoring_nutrisi_model.dart';
+import '../models/tandon_air_model.dart';
 import '../providers/monitoring_nutrisi_provider.dart';
 import '../providers/auth_provider.dart';
+import 'monitoring_nutrisi_form_screen.dart';
+import 'monitoring_nutrisi_detail_screen.dart';
 
 class MonitoringNutrisiScreen extends StatefulWidget {
   const MonitoringNutrisiScreen({super.key});
@@ -26,9 +29,17 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
     // Initialize Indonesian locale for DateFormat
     initializeDateFormatting('id_ID', null);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<MonitoringNutrisiProvider>();
-      provider.initialize();
+      _initializeData();
     });
+  }
+
+  Future<void> _initializeData() async {
+    try {
+      final provider = context.read<MonitoringNutrisiProvider>();
+      await provider.initialize();
+    } catch (e) {
+      print('Error initializing monitoring nutrisi data: $e');
+    }
   }
 
   @override
@@ -257,7 +268,17 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
-                              onPressed: () => _showAddEditDialog(),
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const MonitoringNutrisiFormScreen(),
+                                  ),
+                                );
+                                if (result == true) {
+                                  context.read<MonitoringNutrisiProvider>().refresh();
+                                }
+                              },
                               icon: const Icon(Icons.add),
                               label: const Text('Tambah Monitoring'),
                             ),
@@ -282,7 +303,18 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MonitoringNutrisiFormScreen(),
+            ),
+          );
+          if (result == true) {
+            // Refresh data if needed
+            context.read<MonitoringNutrisiProvider>().refresh();
+          }
+        },
         backgroundColor: Colors.green.shade600,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -296,209 +328,91 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 16,
-                            color: Colors.green[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormat('dd/MM/yyyy').format(monitoring.tanggalMonitoring),
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[600],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Consumer<MonitoringNutrisiProvider>(
-                            builder: (context, provider, child) {
-                              String relationName = '';
-                              Color bgColor = Colors.blue[100]!;
-                              Color textColor = Colors.blue[700]!;
-                              
-                              if (monitoring.idPembenihan != null) {
-                                relationName = 'P: ${provider.getPembenihanName(monitoring.idPembenihan!)}';
-                                bgColor = Colors.green[100]!;
-                                textColor = Colors.green[700]!;
-                              } else if (monitoring.idPenanaman != null) {
-                                relationName = 'T: ${provider.getPenanamanName(monitoring.idPenanaman!)}';
-                                bgColor = Colors.orange[100]!;
-                                textColor = Colors.orange[700]!;
-                              }
-                              
-                              if (relationName.isEmpty) return const SizedBox.shrink();
-                              
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: bgColor,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  relationName,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: textColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _showAddEditDialog(monitoring: monitoring);
-                    } else if (value == 'delete') {
-                      _showDeleteConfirmation(monitoring);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 16),
-                          SizedBox(width: 8),
-                          Text('Edit'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 16, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Hapus', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MonitoringNutrisiDetailScreen(
+                monitoring: monitoring,
+              ),
             ),
-            const SizedBox(height: 12),
-            
-            // Monitoring Data Grid
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              children: [
-                if (monitoring.nilaiPpm != null)
-                  _buildDataItem('PPM', '${monitoring.nilaiPpm!.toStringAsFixed(1)}', Icons.science),
-                if (monitoring.tingkatPh != null)
-                  _buildDataItem('pH', monitoring.tingkatPh!.toStringAsFixed(1), Icons.water_drop),
-                if (monitoring.suhuAir != null)
-                  _buildDataItem('Suhu', '${monitoring.suhuAir!.toStringAsFixed(1)}°C', Icons.thermostat),
-                if (monitoring.airDitambah != null)
-                  _buildDataItem('Air', '${monitoring.airDitambah!.toStringAsFixed(0)}L', Icons.water),
-                if (monitoring.nutrisiDitambah != null)
-                  _buildDataItem('Nutrisi', '${monitoring.nutrisiDitambah!.toStringAsFixed(1)}ml', Icons.local_drink),
-              ],
-            ),
-            
-            if (monitoring.catatan != null && monitoring.catatan!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.note,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Catatan:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      monitoring.catatan!,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
+          );
+          if (result == true) {
+            // Refresh data if needed
+            context.read<MonitoringNutrisiProvider>().refresh();
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Nama Paket
+              Text(
+                monitoring.nama,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
                 ),
               ),
-            ],
-            
-            if (monitoring.dicatatOleh != null) ...[
               const SizedBox(height: 8),
+              
+              // Tanggal
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat('dd MMMM yyyy', 'id_ID').format(monitoring.tanggalMonitoring),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Dicatat oleh
               Row(
                 children: [
                   Icon(
                     Icons.person,
-                    size: 14,
-                    color: Colors.grey[500],
+                    size: 16,
+                    color: Colors.grey[600],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Dicatat oleh: ${monitoring.dicatatOleh}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                  if (monitoring.dicatatPada != null) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormat('dd/MM/yyyy HH:mm').format(monitoring.dicatatPada!),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Dicatat oleh: ${monitoring.dicatatOleh}',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+                        fontSize: 14,
+                        color: Colors.grey[700],
                       ),
                     ),
-                  ],
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey[400],
+                  ),
                 ],
               ),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
+
+
 
   Widget _buildDataItem(String label, String value, IconData icon) {
     return Container(
@@ -706,311 +620,6 @@ class _MonitoringNutrisiScreenState extends State<MonitoringNutrisiScreen> {
     if (_selectedDate == null && _selectedPembenihanId == null && _selectedPenanamanId == null) {
       provider.clearFilters();
     }
-  }
-
-  void _showAddEditDialog({MonitoringNutrisiModel? monitoring}) {
-    final isEdit = monitoring != null;
-    final formKey = GlobalKey<FormState>();
-    
-    DateTime selectedDate = monitoring?.tanggalMonitoring ?? DateTime.now();
-    String? selectedPembenihanId = monitoring?.idPembenihan;
-    String? selectedPenanamanId = monitoring?.idPenanaman;
-    String selectedRelationType = monitoring?.idPembenihan != null ? 'pembenihan' : 'penanaman';
-    final nilaiPpmController = TextEditingController(
-        text: monitoring?.nilaiPpm?.toString() ?? '');
-    final airDitambahController = TextEditingController(
-        text: monitoring?.airDitambah?.toString() ?? '');
-    final nutrisiDitambahController = TextEditingController(
-        text: monitoring?.nutrisiDitambah?.toString() ?? '');
-    final tingkatPhController = TextEditingController(
-        text: monitoring?.tingkatPh?.toString() ?? '');
-    final suhuAirController = TextEditingController(
-        text: monitoring?.suhuAir?.toString() ?? '');
-    final catatanController = TextEditingController(
-        text: monitoring?.catatan ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(isEdit ? 'Edit Monitoring Nutrisi' : 'Tambah Monitoring Nutrisi'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Tanggal
-                  ListTile(
-                    title: const Text('Tanggal Monitoring *'),
-                    subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate)),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (date != null) {
-                        setState(() {
-                          selectedDate = date;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Relation Type Selection
-                  DropdownButtonFormField<String>(
-                    value: selectedRelationType,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipe Relasi *',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'pembenihan',
-                        child: Text('Catatan Pembenihan'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'penanaman',
-                        child: Text('Penanaman Sayur'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedRelationType = value!;
-                        selectedPembenihanId = null;
-                        selectedPenanamanId = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Dynamic Relation Selection
-                  Consumer<MonitoringNutrisiProvider>(
-                    builder: (context, provider, child) {
-                      if (selectedRelationType == 'pembenihan') {
-                        return DropdownButtonFormField<String>(
-                          value: selectedPembenihanId,
-                          decoration: const InputDecoration(
-                            labelText: 'Catatan Pembenihan *',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Catatan pembenihan harus dipilih';
-                            }
-                            return null;
-                          },
-                          items: provider.pembenihanList.map(
-                            (pembenihan) => DropdownMenuItem<String>(
-                              value: pembenihan.idPembenihan,
-                              child: Text('${pembenihan.kodeBatch} - ${pembenihan.idBenih}'),
-                            ),
-                          ).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPembenihanId = value;
-                            });
-                          },
-                        );
-                      } else {
-                        return DropdownButtonFormField<String>(
-                          value: selectedPenanamanId,
-                          decoration: const InputDecoration(
-                            labelText: 'Penanaman Sayur *',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Penanaman sayur harus dipilih';
-                            }
-                            return null;
-                          },
-                          items: provider.penanamanList.map(
-                            (penanaman) => DropdownMenuItem<String>(
-                              value: penanaman.idPenanaman,
-                              child: Text('${penanaman.jenisSayur} - ${DateFormat('dd/MM/yyyy').format(penanaman.tanggalTanam)}'),
-                            ),
-                          ).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPenanamanId = value;
-                            });
-                          },
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Nilai PPM
-                  TextFormField(
-                    controller: nilaiPpmController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nilai PPM',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Air Ditambah
-                  TextFormField(
-                    controller: airDitambahController,
-                    decoration: const InputDecoration(
-                      labelText: 'Air Ditambah (Liter)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Nutrisi Ditambah
-                  TextFormField(
-                    controller: nutrisiDitambahController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nutrisi Ditambah (ml)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Tingkat pH
-                  TextFormField(
-                    controller: tingkatPhController,
-                    decoration: const InputDecoration(
-                      labelText: 'Tingkat pH',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Suhu Air
-                  TextFormField(
-                    controller: suhuAirController,
-                    decoration: const InputDecoration(
-                      labelText: 'Suhu Air (°C)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Catatan
-                  TextFormField(
-                    controller: catatanController,
-                    decoration: const InputDecoration(
-                      labelText: 'Catatan',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  // Validate that either pembenihan or penanaman is selected
-                  if (selectedRelationType == 'pembenihan' && selectedPembenihanId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Catatan pembenihan harus dipilih'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-                  if (selectedRelationType == 'penanaman' && selectedPenanamanId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Penanaman sayur harus dipilih'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-                  
-                  final newMonitoring = MonitoringNutrisiModel(
-                    id: monitoring?.id ?? '',
-                    tanggalMonitoring: selectedDate,
-                    idPembenihan: selectedRelationType == 'pembenihan' ? selectedPembenihanId : null,
-                    idPenanaman: selectedRelationType == 'penanaman' ? selectedPenanamanId : null,
-                    nilaiPpm: nilaiPpmController.text.trim().isEmpty
-                        ? null
-                        : double.tryParse(nilaiPpmController.text.trim()),
-                    airDitambah: airDitambahController.text.trim().isEmpty
-                        ? null
-                        : double.tryParse(airDitambahController.text.trim()),
-                    nutrisiDitambah: nutrisiDitambahController.text.trim().isEmpty
-                        ? null
-                        : double.tryParse(nutrisiDitambahController.text.trim()),
-                    tingkatPh: tingkatPhController.text.trim().isEmpty
-                        ? null
-                        : double.tryParse(tingkatPhController.text.trim()),
-                    suhuAir: suhuAirController.text.trim().isEmpty
-                        ? null
-                        : double.tryParse(suhuAirController.text.trim()),
-                    catatan: catatanController.text.trim().isEmpty
-                        ? null
-                        : catatanController.text.trim(),
-                    dicatatOleh: monitoring?.dicatatOleh ?? '', // Will be auto-filled by provider
-                    dicatatPada: monitoring?.dicatatPada ?? DateTime.now(),
-                  );
-
-                  bool success;
-                  if (isEdit) {
-                    success = await context
-                        .read<MonitoringNutrisiProvider>()
-                        .updateMonitoring(newMonitoring);
-                  } else {
-                    success = await context
-                        .read<MonitoringNutrisiProvider>()
-                        .tambahMonitoring(newMonitoring);
-                  }
-
-                  if (success && context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isEdit
-                              ? 'Monitoring nutrisi berhasil diupdate'
-                              : 'Monitoring nutrisi berhasil ditambahkan',
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          context.read<MonitoringNutrisiProvider>().error ??
-                              'Terjadi kesalahan',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: Text(isEdit ? 'Update' : 'Tambah'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showDeleteConfirmation(MonitoringNutrisiModel monitoring) {

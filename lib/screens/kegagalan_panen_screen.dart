@@ -570,15 +570,17 @@ class _KegagalanPanenScreenState extends State<KegagalanPanenScreen> {
               Navigator.of(context).pop();
               final provider = Provider.of<KegagalanPanenProvider>(context, listen: false);
               final success = await provider.hapusKegagalanPanen(kegagalan.idKegagalan);
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Data berhasil dihapus')),
-                );
-                _loadData();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Gagal menghapus data: ${provider.errorMessage}')),
-                );
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Data berhasil dihapus')),
+                  );
+                  _loadData();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal menghapus data: ${provider.errorMessage}')),
+                  );
+                }
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -764,15 +766,17 @@ class _AddKegagalanDialogState extends State<_AddKegagalanDialog> {
                         dicatatOleh: authProvider.user?.idPengguna ?? '',
                       );
 
-                      if (success) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data berhasil ditambahkan')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal menambahkan data: ${provider.errorMessage}')),
-                        );
+                      if (mounted) {
+                        if (success) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Data berhasil ditambahkan')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal menambahkan data: ${provider.errorMessage}')),
+                          );
+                        }
                       }
                     }
                   },
@@ -983,15 +987,17 @@ class _EditKegagalanDialogState extends State<_EditKegagalanDialog> {
                         updateData,
                       );
 
-                      if (success) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data berhasil diupdate')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal mengupdate data: ${provider.errorMessage}')),
-                        );
+                      if (mounted) {
+                        if (success) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Data berhasil diupdate')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal mengupdate data: ${provider.errorMessage}')),
+                          );
+                        }
                       }
                     }
                   },
@@ -1229,7 +1235,7 @@ class _StatistikKegagalanDialogState extends State<_StatistikKegagalanDialog> {
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: Color(int.parse(KegagalanPanenModel.getJenisKegagalanColor(jenis).substring(1), radix: 16) + 0xFF000000),
+              color: _getJenisColorFromString(jenis),
               shape: BoxShape.circle,
             ),
           ),
@@ -1241,6 +1247,13 @@ class _StatistikKegagalanDialogState extends State<_StatistikKegagalanDialog> {
         ],
       ),
     );
+  }
+
+  Color _getJenisColorFromString(String jenis) {
+    String hexColor = KegagalanPanenModel.getJenisKegagalanColor(jenis);
+    // Remove the # and parse as hex
+    String hexValue = hexColor.substring(1);
+    return Color(int.parse('FF$hexValue', radix: 16));
   }
 
   Widget _buildLokasiStatRow(String lokasi, int jumlah) {

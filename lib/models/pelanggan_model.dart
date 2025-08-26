@@ -4,6 +4,7 @@ class PelangganModel {
   final String id;
   final String namaPelanggan;
   final String jenisPelanggan; // restoran, hotel, individu
+  final String? namaTempatUsaha;
   final String? kontakPerson;
   final String? telepon;
   final String? alamat;
@@ -14,6 +15,7 @@ class PelangganModel {
     required this.id,
     required this.namaPelanggan,
     required this.jenisPelanggan,
+    this.namaTempatUsaha,
     this.kontakPerson,
     this.telepon,
     this.alamat,
@@ -23,17 +25,50 @@ class PelangganModel {
 
   // Factory constructor from Firestore
   factory PelangganModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return PelangganModel(
-      id: doc.id,
-      namaPelanggan: data['nama_pelanggan'] ?? '',
-      jenisPelanggan: data['jenis_pelanggan'] ?? 'restoran',
-      kontakPerson: data['kontak_person'],
-      telepon: data['telepon'],
-      alamat: data['alamat'],
-      aktif: data['aktif'] ?? true,
-      dibuatPada: (data['dibuat_pada'] as Timestamp?)?.toDate() ?? DateTime.now(),
-    );
+    try {
+      final data = doc.data();
+      
+      if (data == null) {
+        throw Exception('Document data is null for document ${doc.id}');
+      }
+      
+      final Map<String, dynamic> dataMap = data as Map<String, dynamic>;
+      
+      // Validate required fields
+      if (!dataMap.containsKey('nama_pelanggan') || dataMap['nama_pelanggan'] == null) {
+        throw Exception('Missing required field: nama_pelanggan');
+      }
+      
+      DateTime dibuatPada;
+      try {
+        final timestamp = dataMap['dibuat_pada'];
+        if (timestamp is Timestamp) {
+          dibuatPada = timestamp.toDate();
+        } else if (timestamp is String) {
+          dibuatPada = DateTime.parse(timestamp);
+        } else {
+          dibuatPada = DateTime.now();
+        }
+      } catch (e) {
+        print('Error parsing dibuat_pada for document ${doc.id}: $e');
+        dibuatPada = DateTime.now();
+      }
+      
+      return PelangganModel(
+        id: doc.id,
+        namaPelanggan: (dataMap['nama_pelanggan'] ?? '').toString().trim(),
+        jenisPelanggan: (dataMap['jenis_pelanggan'] ?? 'restoran').toString().trim(),
+        namaTempatUsaha: dataMap['nama_tempat_usaha']?.toString()?.trim(),
+        kontakPerson: dataMap['kontak_person']?.toString()?.trim(),
+        telepon: dataMap['telepon']?.toString()?.trim(),
+        alamat: dataMap['alamat']?.toString()?.trim(),
+        aktif: dataMap['aktif'] ?? true,
+        dibuatPada: dibuatPada,
+      );
+    } catch (e) {
+      print('Error creating PelangganModel from Firestore document ${doc.id}: $e');
+      rethrow;
+    }
   }
 
   // Factory constructor from Map
@@ -42,6 +77,7 @@ class PelangganModel {
       id: id,
       namaPelanggan: data['nama_pelanggan'] ?? '',
       jenisPelanggan: data['jenis_pelanggan'] ?? 'restoran',
+      namaTempatUsaha: data['nama_tempat_usaha'],
       kontakPerson: data['kontak_person'],
       telepon: data['telepon'],
       alamat: data['alamat'],
@@ -55,6 +91,7 @@ class PelangganModel {
     return {
       'nama_pelanggan': namaPelanggan,
       'jenis_pelanggan': jenisPelanggan,
+      'nama_tempat_usaha': namaTempatUsaha,
       'kontak_person': kontakPerson,
       'telepon': telepon,
       'alamat': alamat,
@@ -68,6 +105,7 @@ class PelangganModel {
     String? id,
     String? namaPelanggan,
     String? jenisPelanggan,
+    String? namaTempatUsaha,
     String? kontakPerson,
     String? telepon,
     String? alamat,
@@ -78,6 +116,7 @@ class PelangganModel {
       id: id ?? this.id,
       namaPelanggan: namaPelanggan ?? this.namaPelanggan,
       jenisPelanggan: jenisPelanggan ?? this.jenisPelanggan,
+      namaTempatUsaha: namaTempatUsaha ?? this.namaTempatUsaha,
       kontakPerson: kontakPerson ?? this.kontakPerson,
       telepon: telepon ?? this.telepon,
       alamat: alamat ?? this.alamat,

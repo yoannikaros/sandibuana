@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rules untuk collection pengguna
+    match /pengguna/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;
+    }
+    
+    // Rules untuk collection pelanggan
+    match /pelanggan/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Rules untuk transaksi harian (nested collection)
+    match /pelanggan/{pelangganId}/transaksi_harian/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Rules untuk collection lainnya
+    match /jenis_benih/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /jenis_pupuk/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /tipe_pupuk/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /jenis_pelanggan/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /kategori_pengeluaran/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /catatan_perlakuan/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /pembelian_benih/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /penanaman_sayur/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /monitoring_nutrisi/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /kondisi_meja/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /tandon_air/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /jadwal_pemupukan/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /perlakuan_pupuk/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /kegagalan_panen/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /pengeluaran_harian/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /penjualan_harian/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+
+    
+    match /rekap_pupuk_mingguan/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Fallback rule untuk collection lain yang mungkin ada
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

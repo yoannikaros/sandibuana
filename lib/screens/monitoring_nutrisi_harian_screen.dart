@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/monitoring_nutrisi_model.dart';
-import '../models/tandon_air_model.dart';
+import '../models/tandon_monitoring_data_model.dart';
 import '../providers/monitoring_nutrisi_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -79,7 +79,7 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Cari berdasarkan catatan...',
+              hintText: 'Cari berdasarkan nama paket atau catatan...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -126,7 +126,7 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
                         ...provider.tandonList.map((tandon) {
                           return DropdownMenuItem(
                             value: tandon.id,
-                            child: Text(tandon.namaTandon ?? 'Tandon ${tandon.kodeTandon}'),
+                            child: Text('${tandon.namaTandon ?? 'Tandon'} (${tandon.kodeTandon})'),
                           );
                         }),
                       ],
@@ -342,7 +342,7 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
   }
 
   Widget _buildMonitoringCard(MonitoringNutrisiModel monitoring, MonitoringNutrisiProvider provider) {
-    final tandonName = provider.getTandonName(monitoring.idTandon);
+    final tandonName = provider.getTandonNames(monitoring.tandonData?.map((t) => t.idTandon).toList() ?? <String>[]);
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -358,6 +358,35 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Nama Paket
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.label,
+                      size: 16,
+                      color: Colors.green.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      monitoring.nama,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -398,37 +427,117 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Monitoring values grid
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildValueCard(
-                                'PPM',
-                                '${monitoring.nilaiPpm ?? 0}',
-                                Icons.opacity,
-                                _getPpmColor(monitoring.nilaiPpm ?? 0),
+                        // Monitoring values per tandon
+                        if (monitoring.tandonData != null && monitoring.tandonData!.isNotEmpty) ...[
+                          for (final tandonData in monitoring.tandonData!) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.blue.shade200),
                               ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tandonData.namaTandon ?? 'Tandon ${tandonData.idTandon}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildValueCard(
+                                          'PPM',
+                                          '${tandonData.nilaiPpm ?? 0}',
+                                          Icons.opacity,
+                                          _getPpmColor(tandonData.nilaiPpm ?? 0),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: _buildValueCard(
+                                          'pH',
+                                          (tandonData.tingkatPh ?? 0).toStringAsFixed(1),
+                                          Icons.science,
+                                          _getPhColor(tandonData.tingkatPh ?? 0),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: _buildValueCard(
+                                          'Suhu',
+                                          '${(tandonData.suhuAir ?? 0).toStringAsFixed(1)}°C',
+                                          Icons.thermostat,
+                                          _getTempColor(tandonData.suhuAir ?? 0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if ((tandonData.airDitambah != null && tandonData.airDitambah! > 0) || (tandonData.nutrisiDitambah != null && tandonData.nutrisiDitambah! > 0)) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        if (tandonData.airDitambah != null && tandonData.airDitambah! > 0) ...[
+                                          Icon(
+                                            Icons.water,
+                                            size: 14,
+                                            color: Colors.blue.shade600,
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            'Air: ${tandonData.airDitambah}L',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.blue.shade600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                        ],
+                                        if (tandonData.nutrisiDitambah != null && tandonData.nutrisiDitambah! > 0) ...[
+                          Icon(
+                            Icons.eco,
+                            size: 14,
+                            color: Colors.green.shade600,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Nutrisi: ${tandonData.nutrisiDitambah}ml',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.green.shade600,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildValueCard(
-                                'pH',
-                                (monitoring.tingkatPh ?? 0).toStringAsFixed(1),
-                                Icons.science,
-                                _getPhColor(monitoring.tingkatPh ?? 0),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildValueCard(
-                                'Suhu',
-                                '${(monitoring.suhuAir ?? 0).toStringAsFixed(1)}°C',
-                                Icons.thermostat,
-                                _getTempColor(monitoring.suhuAir ?? 0),
+                          ),
+                        ],
+                                      ],
+                                    ),
+                                  ],
+                                  if (tandonData.catatan?.isNotEmpty == true) ...[
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        tandonData.catatan!,
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -468,74 +577,93 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
                   ),
                 ],
               ),
-              if ((monitoring.airDitambah ?? 0) > 0 || (monitoring.nutrisiDitambah ?? 0) > 0) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    if ((monitoring.airDitambah ?? 0) > 0) ...[
-                      Icon(
-                        Icons.water,
-                        size: 16,
-                        color: Colors.blue.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Air: ${monitoring.airDitambah}L',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade600,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                    ],
-                    if ((monitoring.nutrisiDitambah ?? 0) > 0) ...[
-                      Icon(
-                        Icons.eco,
-                        size: 16,
-                        color: Colors.green.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Nutrisi: ${monitoring.nutrisiDitambah}ml',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green.shade600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-              if (monitoring.catatan != null && monitoring.catatan!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.note,
-                        size: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          monitoring.catatan!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontStyle: FontStyle.italic,
+              // Calculate total air and nutrisi from all tandon data
+              ...() {
+                final totalAirDitambah = monitoring.tandonData?.fold<double>(0, (sum, tandon) => sum + (tandon.airDitambah ?? 0)) ?? 0;
+                final totalNutrisiDitambah = monitoring.tandonData?.fold<double>(0, (sum, tandon) => sum + (tandon.nutrisiDitambah ?? 0)) ?? 0;
+                
+                if (totalAirDitambah > 0 || totalNutrisiDitambah > 0) {
+                  return [
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        if (totalAirDitambah > 0) ...[
+                          Icon(
+                            Icons.water,
+                            size: 16,
+                            color: Colors.blue.shade600,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Air: ${totalAirDitambah}L',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade600,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                        ],
+                        if (totalNutrisiDitambah > 0) ...[
+                          Icon(
+                            Icons.eco,
+                            size: 16,
+                            color: Colors.green.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Nutrisi: ${totalNutrisiDitambah}ml',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green.shade600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ];
+                } else {
+                  return <Widget>[];
+                }
+              }(),
+              // Collect all catatan from tandon data
+              ...() {
+                final allCatatan = monitoring.tandonData?.where((tandon) => tandon.catatan != null && tandon.catatan!.isNotEmpty).map((tandon) => tandon.catatan!).join('; ') ?? '';
+                
+                if (allCatatan.isNotEmpty) {
+                  return [
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.note,
+                            size: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              allCatatan,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ];
+                } else {
+                  return <Widget>[];
+                }
+              }(),
             ],
           ),
         ),
@@ -547,9 +675,9 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -616,17 +744,19 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
 
   void _showAddEditDialog({MonitoringNutrisiModel? monitoring}) {
     final isEdit = monitoring != null;
+    final namaController = TextEditingController(text: monitoring?.nama ?? '');
     final tanggalController = TextEditingController(
       text: isEdit ? DateFormat('yyyy-MM-dd HH:mm').format(monitoring.tanggalMonitoring) : DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now()),
     );
-    final nilaiPpmController = TextEditingController(text: monitoring?.nilaiPpm?.toString() ?? '');
-    final airDitambahController = TextEditingController(text: monitoring?.airDitambah?.toString() ?? '0');
-    final nutrisiDitambahController = TextEditingController(text: monitoring?.nutrisiDitambah?.toString() ?? '0');
-    final tingkatPhController = TextEditingController(text: monitoring?.tingkatPh?.toString() ?? '');
-    final suhuAirController = TextEditingController(text: monitoring?.suhuAir?.toString() ?? '');
-    final catatanController = TextEditingController(text: monitoring?.catatan ?? '');
+    final firstTandonData = monitoring?.tandonData?.isNotEmpty == true ? monitoring!.tandonData!.first : null;
+    final nilaiPpmController = TextEditingController(text: firstTandonData?.nilaiPpm?.toString() ?? '');
+    final airDitambahController = TextEditingController(text: firstTandonData?.airDitambah?.toString() ?? '0');
+    final nutrisiDitambahController = TextEditingController(text: firstTandonData?.nutrisiDitambah?.toString() ?? '0');
+    final tingkatPhController = TextEditingController(text: firstTandonData?.tingkatPh?.toString() ?? '');
+    final suhuAirController = TextEditingController(text: firstTandonData?.suhuAir?.toString() ?? '');
+    final catatanController = TextEditingController(text: firstTandonData?.catatan ?? '');
     
-    String? selectedTandonId = monitoring?.idTandon;
+    List<String> selectedTandonIds = monitoring?.tandonData?.map((t) => t.idTandon).toList() ?? [];
     DateTime selectedDate = monitoring?.tanggalMonitoring ?? DateTime.now();
 
     showDialog(
@@ -638,6 +768,15 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Nama Paket
+                TextField(
+                  controller: namaController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Paket *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Date picker
                 ListTile(
                   title: const Text('Tanggal & Waktu'),
@@ -671,32 +810,57 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
                   },
                 ),
                 const SizedBox(height: 16),
-                // Tandon dropdown
+                // Tandon multiple select
                 Consumer<MonitoringNutrisiProvider>(
                   builder: (context, provider, child) {
-                    return DropdownButtonFormField<String>(
-                      value: selectedTandonId,
-                      decoration: const InputDecoration(
-                        labelText: 'Tandon Air *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: provider.tandonList.map((tandon) {
-                        return DropdownMenuItem(
-                          value: tandon.id,
-                          child: Text(tandon.namaTandon ?? 'Tandon ${tandon.kodeTandon}'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedTandonId = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Tandon harus dipilih';
-                        }
-                        return null;
-                      },
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tandon Air *',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Column(
+                            children: provider.tandonList.map((tandon) {
+                              final isSelected = selectedTandonIds.contains(tandon.id);
+                              return CheckboxListTile(
+                                title: Text('${tandon.namaTandon ?? 'Tandon'} (${tandon.kodeTandon})'),
+                                value: isSelected,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      selectedTandonIds.add(tandon.id);
+                                    } else {
+                                      selectedTandonIds.remove(tandon.id);
+                                    }
+                                  });
+                                },
+                                dense: true,
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        if (selectedTandonIds.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Minimal satu tandon harus dipilih',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),
@@ -774,9 +938,15 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
             ),
             ElevatedButton(
               onPressed: () async {
-                if (selectedTandonId == null || selectedTandonId!.isEmpty) {
+                if (namaController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tandon harus dipilih')),
+                    const SnackBar(content: Text('Nama paket harus diisi')),
+                  );
+                  return;
+                }
+                if (selectedTandonIds.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Minimal satu tandon harus dipilih')),
                   );
                   return;
                 }
@@ -804,15 +974,19 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
 
                 final newMonitoring = MonitoringNutrisiModel(
                   id: monitoring?.id ?? '',
+                  nama: namaController.text.trim(),
                   tanggalMonitoring: selectedDate,
-                  idTandon: selectedTandonId!,
-                  nilaiPpm: double.tryParse(nilaiPpmController.text.trim()),
-                  airDitambah: double.tryParse(airDitambahController.text.trim()),
-                  nutrisiDitambah: double.tryParse(nutrisiDitambahController.text.trim()),
-                   tingkatPh: double.tryParse(tingkatPhController.text.trim()),
-                   suhuAir: double.tryParse(suhuAirController.text.trim()),
-                  catatan: catatanController.text.trim().isEmpty ? null : catatanController.text.trim(),
-                  dicatatOleh: authProvider.user?.idPengguna ?? '',
+                  tandonData: selectedTandonIds.map<TandonMonitoringDataModel>((tandonId) => TandonMonitoringDataModel(
+                    idTandon: tandonId,
+                    namaTandon: '', // Will be populated by provider
+                    nilaiPpm: double.tryParse(nilaiPpmController.text.trim()),
+                    airDitambah: double.tryParse(airDitambahController.text.trim()),
+                    nutrisiDitambah: double.tryParse(nutrisiDitambahController.text.trim()),
+                    tingkatPh: double.tryParse(tingkatPhController.text.trim()),
+                    suhuAir: double.tryParse(suhuAirController.text.trim()),
+                    catatan: catatanController.text.trim().isEmpty ? null : catatanController.text.trim(),
+                  )).toList(),
+                  dicatatOleh: authProvider.user?.namaPengguna ?? 'Unknown User',
                   dicatatPada: monitoring?.dicatatPada ?? DateTime.now(),
                 );
 
@@ -873,7 +1047,9 @@ class _MonitoringNutrisiHarianScreenState extends State<MonitoringNutrisiHarianS
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'PPM: ${monitoring.nilaiPpm ?? 0}, pH: ${monitoring.tingkatPh ?? 0}, Suhu: ${monitoring.suhuAir ?? 0}°C',
+                    monitoring.tandonData?.isNotEmpty == true 
+                        ? 'Data untuk ${monitoring.tandonData?.length} tandon'
+                        : 'Tidak ada data tandon',
                     style: TextStyle(color: Colors.blue.shade700),
                   ),
                 ],

@@ -19,8 +19,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'sandibuana.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 5,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -55,8 +56,44 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabel untuk menyimpan session login
+    await db.execute('''
+      CREATE TABLE user_session (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        username TEXT NOT NULL,
+        nama_lengkap TEXT NOT NULL,
+        peran TEXT NOT NULL,
+        remember_me INTEGER NOT NULL DEFAULT 0,
+        login_time TEXT NOT NULL,
+        last_activity TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1
+      )
+    ''');
+
     // Insert data default
     await _insertDefaultData(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 4) {
+      // Tambahkan tabel user_session untuk versi 4
+      await db.execute('''
+        CREATE TABLE user_session (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          email TEXT NOT NULL,
+          username TEXT NOT NULL,
+          nama_lengkap TEXT NOT NULL,
+          peran TEXT NOT NULL,
+          remember_me INTEGER NOT NULL DEFAULT 0,
+          login_time TEXT NOT NULL,
+          last_activity TEXT NOT NULL,
+          is_active INTEGER NOT NULL DEFAULT 1
+        )
+      ''');
+    }
   }
 
   Future<void> _insertDefaultData(Database db) async {

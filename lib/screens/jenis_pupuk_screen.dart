@@ -20,7 +20,7 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PupukProvider>().loadJenisPupuk();
+      context.read<PupukProvider>().loadJenisPupukAktif();
     });
   }
 
@@ -79,7 +79,7 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                           setState(() {
                             _searchQuery = '';
                           });
-                          context.read<PupukProvider>().loadJenisPupuk();
+                          context.read<PupukProvider>().loadJenisPupukAktif();
                         },
                       )
                     : null,
@@ -99,7 +99,7 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                   _searchQuery = value;
                 });
                 if (value.isEmpty) {
-                  context.read<PupukProvider>().loadJenisPupuk();
+                  context.read<PupukProvider>().loadJenisPupukAktif();
                 } else {
                   context.read<PupukProvider>().searchJenisPupuk(value);
                 }
@@ -149,7 +149,7 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                         ElevatedButton(
                           onPressed: () {
                             pupukProvider.clearError();
-                            pupukProvider.loadJenisPupuk();
+                            pupukProvider.loadJenisPupukAktif();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green[600],
@@ -214,6 +214,141 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
         onPressed: () => _showAddEditDialog(),
         backgroundColor: Colors.green[600],
         child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  Color _getStokColor(double stok) {
+    if (stok <= 0) {
+      return Colors.red[600]!;
+    } else if (stok <= 10) {
+      return Colors.orange[600]!;
+    } else {
+      return Colors.green[600]!;
+    }
+  }
+
+  IconData _getStokIcon(double stok) {
+    if (stok <= 0) {
+      return Icons.warning;
+    } else if (stok <= 10) {
+      return Icons.info;
+    } else {
+      return Icons.check;
+    }
+  }
+
+  void _showStokDialog(JenisPupukModel pupuk, {required bool isAdd}) {
+    final formKey = GlobalKey<FormState>();
+    final stokController = TextEditingController();
+    final keteranganController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isAdd ? 'Tambah Stok' : 'Kurangi Stok'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Pupuk: ${pupuk.namaPupuk}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('Stok saat ini: ${pupuk.stok.toStringAsFixed(1)} kg/L'),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: stokController,
+                decoration: InputDecoration(
+                  labelText: '${isAdd ? 'Jumlah Tambah' : 'Jumlah Kurang'} (kg/L)',
+                  border: const OutlineInputBorder(),
+                  suffixText: 'kg/L',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Jumlah harus diisi';
+                  }
+                  final jumlah = double.tryParse(value.trim());
+                  if (jumlah == null || jumlah <= 0) {
+                    return 'Jumlah harus berupa angka positif';
+                  }
+                  if (!isAdd && jumlah > pupuk.stok) {
+                    return 'Jumlah tidak boleh melebihi stok saat ini';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: keteranganController,
+                decoration: const InputDecoration(
+                  labelText: 'Keterangan',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                final jumlah = double.parse(stokController.text.trim());
+                final keterangan = keteranganController.text.trim();
+                
+                final provider = context.read<PupukProvider>();
+                bool success;
+                
+                if (isAdd) {
+                   success = await provider.tambahStokPupuk(
+                     pupuk.id,
+                     jumlah,
+                   );
+                 } else {
+                   success = await provider.kurangiStokPupuk(
+                     pupuk.id,
+                     jumlah,
+                   );
+                 }
+
+                if (!mounted) return;
+
+                Navigator.pop(context);
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isAdd
+                            ? 'Stok berhasil ditambahkan'
+                            : 'Stok berhasil dikurangi',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(provider.error ?? 'Terjadi kesalahan'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isAdd ? Colors.green[600] : Colors.orange[600],
+              foregroundColor: Colors.white,
+            ),
+            child: Text(isAdd ? 'Tambah' : 'Kurangi'),
+          ),
+        ],
       ),
     );
   }
@@ -330,6 +465,34 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
               ),
             ],
             const SizedBox(height: 8),
+            // Stok Information
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getStokColor(pupuk.stok),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _getStokIcon(pupuk.stok),
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Stok: ${pupuk.stok.toStringAsFixed(1)} kg/L',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Icon(
@@ -346,6 +509,25 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                const Spacer(),
+                // Quick stock action buttons
+                if (pupuk.aktif) ...[
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline, size: 18),
+                    onPressed: () => _showStokDialog(pupuk, isAdd: true),
+                    tooltip: 'Tambah Stok',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, size: 18),
+                    onPressed: () => _showStokDialog(pupuk, isAdd: false),
+                    tooltip: 'Kurangi Stok',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ],
             ),
           ],
@@ -375,6 +557,7 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
     final namaController = TextEditingController(text: pupuk?.namaPupuk ?? '');
     final kodeController = TextEditingController(text: pupuk?.kodePupuk ?? '');
     final keteranganController = TextEditingController(text: pupuk?.keterangan ?? '');
+    final stokController = TextEditingController(text: pupuk?.stok.toString() ?? '0');
     String selectedTipe = pupuk?.tipe ?? 'makro';
     bool isAktif = pupuk?.aktif ?? true;
 
@@ -451,6 +634,26 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
+                    controller: stokController,
+                    decoration: const InputDecoration(
+                      labelText: 'Stok (kg/liter)',
+                      border: OutlineInputBorder(),
+                      suffixText: 'kg/L',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Stok harus diisi';
+                      }
+                      final stok = double.tryParse(value.trim());
+                      if (stok == null || stok < 0) {
+                        return 'Stok harus berupa angka positif';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
                     controller: keteranganController,
                     decoration: const InputDecoration(
                       labelText: 'Keterangan',
@@ -495,6 +698,7 @@ class _JenisPupukScreenState extends State<JenisPupukScreen> {
                         ? null
                         : keteranganController.text.trim(),
                     aktif: isAktif,
+                    stok: double.parse(stokController.text.trim()),
                   );
 
                   final provider = context.read<PupukProvider>();

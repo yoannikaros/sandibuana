@@ -16,14 +16,15 @@ import 'providers/catatan_perlakuan_provider.dart';
 import 'providers/pembelian_benih_provider.dart';
 
 import 'providers/pelanggan_provider.dart';
-import 'providers/penjualan_harian_provider.dart';
-import 'providers/cart_provider.dart';
-import 'providers/rekap_benih_mingguan_provider.dart';
+
 import 'providers/rekap_pupuk_mingguan_provider.dart';
 import 'providers/tipe_pupuk_provider.dart';
 import 'providers/jenis_pelanggan_provider.dart';
 import 'providers/perlakuan_pupuk_provider.dart';
 import 'providers/dropdown_provider.dart';
+import 'providers/kondisi_meja_provider.dart';
+import 'providers/cart_provider.dart';
+import 'providers/transaksi_provider.dart';
 import 'services/database_initializer.dart';
 import 'screens/auth_wrapper.dart';
 import 'screens/dropdown_management_screen.dart';
@@ -31,18 +32,24 @@ import 'screens/dropdown_management_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize locale data for Indonesian
-  await initializeDateFormatting('id_ID', null);
-  
-  // Initialize SQLite Database
-  await DatabaseInitializer.initialize();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  runApp(const MyApp());
+  try {
+    // Initialize locale data for Indonesian
+    await initializeDateFormatting('id_ID', null);
+    
+    // Initialize SQLite Database
+    await DatabaseInitializer.initialize();
+    
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    runApp(const MyApp());
+  } catch (e) {
+    print('Error during app initialization: $e');
+    // Run app with error state
+    runApp(ErrorApp(error: e.toString()));
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -57,21 +64,30 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) {
             final provider = TipePupukProvider();
-            provider.loadTipePupuk(); // Load data saat aplikasi dimulai
+            // Load data saat aplikasi dimulai dengan error handling
+            provider.loadTipePupuk().catchError((error) {
+              print('Error loading tipe pupuk: $error');
+            });
             return provider;
           },
         ),
         ChangeNotifierProvider(
           create: (_) {
             final provider = JenisPelangganProvider();
-            provider.loadJenisPelanggan(); // Load data saat aplikasi dimulai
+            // Load data saat aplikasi dimulai dengan error handling
+            provider.loadJenisPelanggan().catchError((error) {
+              print('Error loading jenis pelanggan: $error');
+            });
             return provider;
           },
         ),
         ChangeNotifierProvider(
           create: (_) {
             final provider = PerlakuanPupukProvider();
-            provider.loadPerlakuanPupuk(); // Load data saat aplikasi dimulai
+            // Load data saat aplikasi dimulai dengan error handling
+            provider.loadPerlakuanPupuk().catchError((error) {
+              print('Error loading perlakuan pupuk: $error');
+            });
             return provider;
           },
         ),
@@ -106,13 +122,7 @@ class MyApp extends StatelessWidget {
             previous ?? PembelianBenihProvider(authProvider),
         ),
         ChangeNotifierProvider(create: (_) => PelangganProvider()),
-        ChangeNotifierProvider(create: (_) => PenjualanHarianProvider()),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProxyProvider<AuthProvider, RekapBenihMingguanProvider>(
-          create: (context) => RekapBenihMingguanProvider(context.read<AuthProvider>()),
-          update: (context, authProvider, previous) => 
-            previous ?? RekapBenihMingguanProvider(authProvider),
-        ),
+
         ChangeNotifierProxyProvider<AuthProvider, RekapPupukMingguanProvider>(
           create: (context) => RekapPupukMingguanProvider(context.read<AuthProvider>()),
           update: (context, authProvider, previous) => 
@@ -121,10 +131,20 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) {
             final provider = DropdownProvider();
-            provider.loadAllCategories(); // Load data saat aplikasi dimulai
+            // Load data saat aplikasi dimulai dengan error handling
+            provider.loadAllCategories().catchError((error) {
+              print('Error loading dropdown categories: $error');
+            });
             return provider;
           },
         ),
+        ChangeNotifierProxyProvider<AuthProvider, KondisiMejaProvider>(
+          create: (context) => KondisiMejaProvider(context.read<AuthProvider>()),
+          update: (context, authProvider, previous) => 
+            previous ?? KondisiMejaProvider(authProvider),
+        ),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => TransaksiProvider()),
       ],
       child: MaterialApp(
         title: 'Sandi Buana - Hidroponik',
@@ -163,6 +183,70 @@ class MyApp extends StatelessWidget {
         routes: {
           '/dropdown_management': (context) => const DropdownManagementScreen(),
         },
+      ),
+    );
+  }
+}
+
+// Error App widget untuk menangani error saat startup
+class ErrorApp extends StatelessWidget {
+  final String error;
+  
+  const ErrorApp({super.key, required this.error});
+  
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Sandi Buana - Error',
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.red.shade50,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red.shade400,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Gagal Memulai Aplikasi',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Terjadi kesalahan saat memulai aplikasi:\n$error',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.red,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    // Restart app
+                    main();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Coba Lagi'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

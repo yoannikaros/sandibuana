@@ -145,6 +145,91 @@ class PupukService {
     }
   }
 
+  // Update stok pupuk
+  Future<void> updateStokPupuk(String id, double stokBaru) async {
+    try {
+      await _firestore
+          .collection('jenis_pupuk')
+          .doc(id)
+          .update({'stok': stokBaru});
+    } catch (e) {
+      throw Exception('Gagal mengupdate stok pupuk: $e');
+    }
+  }
+
+  // Tambah stok pupuk
+  Future<void> tambahStokPupuk(String id, double jumlahTambah) async {
+    try {
+      final doc = await _firestore
+          .collection('jenis_pupuk')
+          .doc(id)
+          .get();
+      
+      if (doc.exists && doc.data() != null) {
+        final currentStok = (doc.data()!['stok'] ?? 0.0).toDouble();
+        final newStok = currentStok + jumlahTambah;
+        
+        await _firestore
+            .collection('jenis_pupuk')
+            .doc(id)
+            .update({'stok': newStok});
+      } else {
+        throw Exception('Data pupuk tidak ditemukan');
+      }
+    } catch (e) {
+      throw Exception('Gagal menambah stok pupuk: $e');
+    }
+  }
+
+  // Kurangi stok pupuk
+  Future<void> kurangiStokPupuk(String id, double jumlahKurang) async {
+    try {
+      final doc = await _firestore
+          .collection('jenis_pupuk')
+          .doc(id)
+          .get();
+      
+      if (doc.exists && doc.data() != null) {
+        final currentStok = (doc.data()!['stok'] ?? 0.0).toDouble();
+        final newStok = currentStok - jumlahKurang;
+        
+        if (newStok < 0) {
+          throw Exception('Stok tidak mencukupi. Stok saat ini: $currentStok');
+        }
+        
+        await _firestore
+            .collection('jenis_pupuk')
+            .doc(id)
+            .update({'stok': newStok});
+      } else {
+        throw Exception('Data pupuk tidak ditemukan');
+      }
+    } catch (e) {
+      throw Exception('Gagal mengurangi stok pupuk: $e');
+    }
+  }
+
+  // Get pupuk dengan stok rendah (kurang dari batas minimum)
+  Future<List<JenisPupukModel>> getPupukStokRendah({double batasMinimum = 10.0}) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('jenis_pupuk')
+          .where('aktif', isEqualTo: true)
+          .get();
+      
+      List<JenisPupukModel> pupukList = querySnapshot.docs
+          .map((doc) => JenisPupukModel.fromFirestore(doc.data(), doc.id))
+          .where((pupuk) => pupuk.stok < batasMinimum)
+          .toList();
+      
+      // Client-side sorting
+      pupukList.sort((a, b) => a.stok.compareTo(b.stok));
+      return pupukList;
+    } catch (e) {
+      throw Exception('Gagal mengambil data pupuk stok rendah: $e');
+    }
+  }
+
   // ========================================
   // PENGGUNAAN PUPUK OPERATIONS
   // ========================================

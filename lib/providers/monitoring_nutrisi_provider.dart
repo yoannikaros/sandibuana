@@ -49,20 +49,53 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   
   double get averagePpm {
     if (_filteredMonitoringList.isEmpty) return 0;
-    final total = _filteredMonitoringList.fold<double>(0, (sum, item) => sum + (item.nilaiPpm ?? 0));
-    return total / _filteredMonitoringList.length;
+    double total = 0;
+    int count = 0;
+    for (var monitoring in _filteredMonitoringList) {
+      if (monitoring.tandonData != null) {
+        for (var tandonData in monitoring.tandonData!) {
+          if (tandonData.nilaiPpm != null) {
+            total += tandonData.nilaiPpm!;
+            count++;
+          }
+        }
+      }
+    }
+    return count > 0 ? total / count : 0;
   }
   
   double get averagePh {
     if (_filteredMonitoringList.isEmpty) return 0;
-    final total = _filteredMonitoringList.fold<double>(0, (sum, item) => sum + (item.tingkatPh ?? 0));
-    return total / _filteredMonitoringList.length;
+    double total = 0;
+    int count = 0;
+    for (var monitoring in _filteredMonitoringList) {
+      if (monitoring.tandonData != null) {
+        for (var tandonData in monitoring.tandonData!) {
+          if (tandonData.tingkatPh != null) {
+            total += tandonData.tingkatPh!;
+            count++;
+          }
+        }
+      }
+    }
+    return count > 0 ? total / count : 0;
   }
   
   double get averageTemp {
     if (_filteredMonitoringList.isEmpty) return 0;
-    final total = _filteredMonitoringList.fold<double>(0, (sum, item) => sum + (item.suhuAir ?? 0));
-    return total / _filteredMonitoringList.length;
+    double total = 0;
+    int count = 0;
+    for (var monitoring in _filteredMonitoringList) {
+      if (monitoring.tandonData != null) {
+        for (var tandonData in monitoring.tandonData!) {
+          if (tandonData.suhuAir != null) {
+            total += tandonData.suhuAir!;
+            count++;
+          }
+        }
+      }
+    }
+    return count > 0 ? total / count : 0;
   }
 
   // Initialize provider
@@ -71,6 +104,13 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     
     _setLoading(true);
     try {
+      // Clear all existing data first to prevent duplicates
+      _monitoringList.clear();
+      _filteredMonitoringList.clear();
+      _pembenihanList.clear();
+      _penanamanList.clear();
+      _tandonList.clear();
+      
       await Future.wait([
         loadMonitoring(),
         loadPembenihanList(),
@@ -88,10 +128,29 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   // Load all monitoring data
   Future<void> loadMonitoring() async {
     try {
-      _monitoringList = await _monitoringService.getAllMonitoring();
+      final newMonitoringList = await _monitoringService.getAllMonitoring();
+      // Clear existing list to prevent duplicates
+      _monitoringList.clear();
+      _monitoringList = newMonitoringList;
       _applyFilters();
     } catch (e) {
       _setError('Gagal memuat data monitoring: $e');
+    }
+  }
+
+  // Load monitoring data by date range
+  Future<void> loadMonitoringByDateRange(DateTime startDate, DateTime endDate) async {
+    _setLoading(true);
+    try {
+      final newMonitoringList = await _monitoringService.getMonitoringByDateRange(startDate, endDate);
+      // Clear existing list to prevent duplicates
+      _monitoringList.clear();
+      _monitoringList = newMonitoringList;
+      _applyFilters();
+    } catch (e) {
+      _setError('Gagal memuat data monitoring berdasarkan tanggal: $e');
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -100,7 +159,10 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     try {
       _setLoading(true);
       final benihService = BenihService();
-      _pembenihanList = await benihService.getAllCatatanPembenihan();
+      final newPembenihanList = await benihService.getAllCatatanPembenihan();
+      // Clear existing list to prevent duplicates
+      _pembenihanList.clear();
+      _pembenihanList = newPembenihanList;
     } catch (e) {
       _setError(e.toString());
     } finally {
@@ -113,7 +175,10 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     try {
       _setLoading(true);
       final penanamanService = PenanamanSayurService();
-      _penanamanList = await penanamanService.getAllPenanamanSayur();
+      final newPenanamanList = await penanamanService.getAllPenanamanSayur();
+      // Clear existing list to prevent duplicates
+      _penanamanList.clear();
+      _penanamanList = newPenanamanList;
     } catch (e) {
       _setError(e.toString());
     } finally {
@@ -126,7 +191,10 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     try {
       _setLoading(true);
       final tandonService = TandonService();
-      _tandonList = await tandonService.getAllTandon();
+      final newTandonList = await tandonService.getAllTandon();
+      // Clear existing list to prevent duplicates
+      _tandonList.clear();
+      _tandonList = newTandonList;
     } catch (e) {
       _setError(e.toString());
     } finally {
@@ -290,7 +358,9 @@ class MonitoringNutrisiProvider with ChangeNotifier {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final searchLower = _searchQuery.toLowerCase();
-        final matchesSearch = (monitoring.catatan?.toLowerCase().contains(searchLower) ?? false) ||
+        final matchesSearch = monitoring.nama.toLowerCase().contains(searchLower) ||
+                            (monitoring.tandonData?.any((tandon) => 
+                              tandon.catatan?.toLowerCase().contains(searchLower) == true) ?? false) ||
                             getPembenihanName(monitoring.idPembenihan).toLowerCase().contains(searchLower) ||
                             getPenanamanName(monitoring.idPenanaman).toLowerCase().contains(searchLower);
         if (!matchesSearch) return false;
@@ -380,9 +450,9 @@ class MonitoringNutrisiProvider with ChangeNotifier {
       dataToAnalyze = _monitoringList;
     }
 
-    final ppmValues = dataToAnalyze.map((m) => m.nilaiPpm ?? 0.0).where((val) => val > 0).toList();
-    final phValues = dataToAnalyze.map((m) => m.tingkatPh ?? 0.0).where((val) => val > 0).toList();
-    final tempValues = dataToAnalyze.map((m) => m.suhuAir ?? 0.0).where((val) => val > 0).toList();
+    final ppmValues = dataToAnalyze.expand((m) => m.tandonData?.map((t) => t.nilaiPpm ?? 0.0) ?? <double>[]).where((val) => val > 0).toList();
+    final phValues = dataToAnalyze.expand((m) => m.tandonData?.map((t) => t.tingkatPh ?? 0.0) ?? <double>[]).where((val) => val > 0).toList();
+    final tempValues = dataToAnalyze.expand((m) => m.tandonData?.map((t) => t.suhuAir ?? 0.0) ?? <double>[]).where((val) => val > 0).toList();
 
     if (dataToAnalyze.isEmpty) {
       return {
@@ -412,8 +482,8 @@ class MonitoringNutrisiProvider with ChangeNotifier {
       'maxPh': phValues.isNotEmpty ? phValues.reduce((a, b) => a > b ? a : b) : 0.0,
       'minTemp': tempValues.isNotEmpty ? tempValues.reduce((a, b) => a < b ? a : b) : 0.0,
       'maxTemp': tempValues.isNotEmpty ? tempValues.reduce((a, b) => a > b ? a : b) : 0.0,
-      'totalWaterAdded': dataToAnalyze.fold<double>(0, (sum, m) => sum + (m.airDitambah ?? 0)),
-      'totalNutrientAdded': dataToAnalyze.fold<double>(0, (sum, m) => sum + (m.nutrisiDitambah ?? 0)),
+      'totalWaterAdded': dataToAnalyze.fold<double>(0, (sum, m) => sum + (m.tandonData?.fold<double>(0, (tandonSum, t) => tandonSum + (t.airDitambah ?? 0)) ?? 0)),
+      'totalNutrientAdded': dataToAnalyze.fold<double>(0, (sum, m) => sum + (m.tandonData?.fold<double>(0, (tandonSum, t) => tandonSum + (t.nutrisiDitambah ?? 0)) ?? 0)),
     };
   }
 
@@ -463,7 +533,7 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     }
   }
 
-  // Get tandon name by ID
+  // Get tandon name by ID (single tandon - for backward compatibility)
   String getTandonName(String? tandonId) {
     if (tandonId == null) return '';
     try {
@@ -482,6 +552,30 @@ class MonitoringNutrisiProvider with ChangeNotifier {
     }
   }
 
+  // Get tandon names by IDs (multiple tandon)
+  String getTandonNames(List<String>? tandonIds) {
+    if (tandonIds == null || tandonIds.isEmpty) return '';
+    
+    final names = tandonIds.map((id) {
+      try {
+        final tandon = _tandonList.firstWhere(
+          (t) => t.id == id,
+          orElse: () => TandonAirModel(
+            id: '',
+            kodeTandon: 'TDN000',
+            namaTandon: 'Tidak Ditemukan',
+            kapasitas: 0,
+          ),
+        );
+        return tandon.namaTandon ?? 'Tandon ${tandon.kodeTandon}';
+      } catch (e) {
+        return 'Tandon Tidak Diketahui';
+      }
+    }).toList();
+    
+    return names.join(', ');
+  }
+
   // Get monitoring by ID
   MonitoringNutrisiModel? getMonitoringById(String id) {
     try {
@@ -495,6 +589,13 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   Future<void> refresh() async {
     _setLoading(true);
     try {
+      // Clear all existing data first to prevent duplicates
+      _monitoringList.clear();
+      _filteredMonitoringList.clear();
+      _pembenihanList.clear();
+      _penanamanList.clear();
+      _tandonList.clear();
+      
       await Future.wait([
         loadMonitoring(),
         loadPembenihanList(),
@@ -517,6 +618,8 @@ class MonitoringNutrisiProvider with ChangeNotifier {
   void startListening() {
     getMonitoringStream().listen(
       (monitoringList) {
+        // Clear existing list to prevent duplicates
+        _monitoringList.clear();
         _monitoringList = monitoringList;
         _applyFilters();
       },

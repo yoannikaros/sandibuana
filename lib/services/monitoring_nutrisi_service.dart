@@ -76,6 +76,23 @@ class MonitoringNutrisiService {
     }
   }
 
+  // Get monitoring by tandon (supports multiple tandon)
+  Future<List<MonitoringNutrisiModel>> getMonitoringByTandon(String tandonId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_collection)
+          .where('id_tandon', arrayContains: tandonId)
+          .orderBy('tanggal_monitoring', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => MonitoringNutrisiModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      throw Exception('Gagal mengambil monitoring berdasarkan tandon: $e');
+    }
+  }
+
   // Search monitoring by notes
   Future<List<MonitoringNutrisiModel>> searchMonitoring(String query) async {
     try {
@@ -91,7 +108,15 @@ class MonitoringNutrisiService {
       // Filter by search query (case-insensitive)
       final searchLower = query.toLowerCase();
       return allMonitoring.where((monitoring) {
-        return monitoring.catatan?.toLowerCase().contains(searchLower) ?? false;
+        // Search in tandon data catatan
+        if (monitoring.tandonData != null) {
+          for (final tandon in monitoring.tandonData!) {
+            if (tandon.catatan?.toLowerCase().contains(searchLower) ?? false) {
+              return true;
+            }
+          }
+        }
+        return false;
       }).toList();
     } catch (e) {
       throw Exception('Gagal mencari monitoring: $e');
@@ -193,9 +218,20 @@ class MonitoringNutrisiService {
         };
       }
 
-      final ppmValues = monitoringList.map((m) => m.nilaiPpm ?? 0.0).where((val) => val > 0).toList();
-      final phValues = monitoringList.map((m) => m.tingkatPh ?? 0.0).where((val) => val > 0).toList();
-      final tempValues = monitoringList.map((m) => m.suhuAir ?? 0.0).where((val) => val > 0).toList();
+      // Extract values from tandon data
+      final ppmValues = <double>[];
+      final phValues = <double>[];
+      final tempValues = <double>[];
+      
+      for (final monitoring in monitoringList) {
+        if (monitoring.tandonData != null) {
+          for (final tandon in monitoring.tandonData!) {
+            if (tandon.nilaiPpm != null && tandon.nilaiPpm! > 0) ppmValues.add(tandon.nilaiPpm!);
+            if (tandon.tingkatPh != null && tandon.tingkatPh! > 0) phValues.add(tandon.tingkatPh!);
+            if (tandon.suhuAir != null && tandon.suhuAir! > 0) tempValues.add(tandon.suhuAir!);
+          }
+        }
+      }
 
       return {
         'count': monitoringList.length,
@@ -208,8 +244,8 @@ class MonitoringNutrisiService {
         'maxPh': phValues.isNotEmpty ? phValues.reduce((a, b) => a > b ? a : b) : 0.0,
         'minTemp': tempValues.isNotEmpty ? tempValues.reduce((a, b) => a < b ? a : b) : 0.0,
         'maxTemp': tempValues.isNotEmpty ? tempValues.reduce((a, b) => a > b ? a : b) : 0.0,
-        'totalWaterAdded': monitoringList.fold<double>(0, (sum, m) => sum + (m.airDitambah ?? 0)),
-        'totalNutrientAdded': monitoringList.fold<double>(0, (sum, m) => sum + (m.nutrisiDitambah ?? 0)),
+        'totalWaterAdded': monitoringList.fold<double>(0, (sum, m) => sum + (m.tandonData?.fold<double>(0, (tandonSum, tandon) => tandonSum + (tandon.airDitambah ?? 0)) ?? 0)),
+        'totalNutrientAdded': monitoringList.fold<double>(0, (sum, m) => sum + (m.tandonData?.fold<double>(0, (tandonSum, tandon) => tandonSum + (tandon.nutrisiDitambah ?? 0)) ?? 0)),
       };
     } catch (e) {
       throw Exception('Gagal mengambil statistik monitoring: $e');
@@ -303,9 +339,24 @@ class MonitoringNutrisiService {
       final averagesByPembenihan = <String, Map<String, double>>{};
       groupedByPembenihan.forEach((pembenihanId, monitoringList) {
         if (monitoringList.isNotEmpty) {
-          final avgPpm = monitoringList.fold<double>(0, (sum, m) => sum + (m.nilaiPpm ?? 0)) / monitoringList.length;
-          final avgPh = monitoringList.fold<double>(0, (sum, m) => sum + (m.tingkatPh ?? 0)) / monitoringList.length;
-          final avgTemp = monitoringList.fold<double>(0, (sum, m) => sum + (m.suhuAir ?? 0)) / monitoringList.length;
+          // Calculate averages from tandon data
+          final allPpmValues = <double>[];
+          final allPhValues = <double>[];
+          final allTempValues = <double>[];
+          
+          for (final monitoring in monitoringList) {
+            if (monitoring.tandonData != null) {
+              for (final tandon in monitoring.tandonData!) {
+                if (tandon.nilaiPpm != null) allPpmValues.add(tandon.nilaiPpm!);
+                if (tandon.tingkatPh != null) allPhValues.add(tandon.tingkatPh!);
+                if (tandon.suhuAir != null) allTempValues.add(tandon.suhuAir!);
+              }
+            }
+          }
+          
+          final avgPpm = allPpmValues.isNotEmpty ? allPpmValues.fold<double>(0, (sum, val) => sum + val) / allPpmValues.length : 0.0;
+          final avgPh = allPhValues.isNotEmpty ? allPhValues.fold<double>(0, (sum, val) => sum + val) / allPhValues.length : 0.0;
+          final avgTemp = allTempValues.isNotEmpty ? allTempValues.fold<double>(0, (sum, val) => sum + val) / allTempValues.length : 0.0;
 
           averagesByPembenihan[pembenihanId] = {
             'averagePpm': avgPpm,
@@ -350,9 +401,24 @@ class MonitoringNutrisiService {
       final averagesByPenanaman = <String, Map<String, double>>{};
       groupedByPenanaman.forEach((penanamanId, monitoringList) {
         if (monitoringList.isNotEmpty) {
-          final avgPpm = monitoringList.fold<double>(0, (sum, m) => sum + (m.nilaiPpm ?? 0)) / monitoringList.length;
-          final avgPh = monitoringList.fold<double>(0, (sum, m) => sum + (m.tingkatPh ?? 0)) / monitoringList.length;
-          final avgTemp = monitoringList.fold<double>(0, (sum, m) => sum + (m.suhuAir ?? 0)) / monitoringList.length;
+          // Calculate averages from tandon data
+          final allPpmValues = <double>[];
+          final allPhValues = <double>[];
+          final allTempValues = <double>[];
+          
+          for (final monitoring in monitoringList) {
+            if (monitoring.tandonData != null) {
+              for (final tandon in monitoring.tandonData!) {
+                if (tandon.nilaiPpm != null) allPpmValues.add(tandon.nilaiPpm!);
+                if (tandon.tingkatPh != null) allPhValues.add(tandon.tingkatPh!);
+                if (tandon.suhuAir != null) allTempValues.add(tandon.suhuAir!);
+              }
+            }
+          }
+          
+          final avgPpm = allPpmValues.isNotEmpty ? allPpmValues.fold<double>(0, (sum, val) => sum + val) / allPpmValues.length : 0.0;
+          final avgPh = allPhValues.isNotEmpty ? allPhValues.fold<double>(0, (sum, val) => sum + val) / allPhValues.length : 0.0;
+          final avgTemp = allTempValues.isNotEmpty ? allTempValues.fold<double>(0, (sum, val) => sum + val) / allTempValues.length : 0.0;
 
           averagesByPenanaman[penanamanId] = {
             'averagePpm': avgPpm,

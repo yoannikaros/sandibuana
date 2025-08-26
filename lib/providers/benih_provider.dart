@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../models/jenis_benih_model.dart';
 import '../models/pembelian_benih_model.dart';
 import '../models/catatan_pembenihan_model.dart';
@@ -25,20 +26,31 @@ class BenihProvider with ChangeNotifier {
   // Clear error
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Set loading state
   void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+    if (_isLoading != loading) {
+      _isLoading = loading;
+      // Use post frame callback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    }
   }
 
   // Set error message
   void _setError(String error) {
     _errorMessage = error;
     _isLoading = false;
-    notifyListeners();
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // ========================================
@@ -249,7 +261,7 @@ class BenihProvider with ChangeNotifier {
     String? satuan,
     required String kodeBatch,
     required String status,
-    DateTime? tanggalPanenTarget,
+
     String? catatan,
     required String dicatatOleh,
   }) async {
@@ -268,7 +280,7 @@ class BenihProvider with ChangeNotifier {
         satuan: satuan,
         kodeBatch: kodeBatch,
         status: status,
-        tanggalPanenTarget: tanggalPanenTarget,
+
         catatan: catatan,
         dicatatOleh: dicatatOleh,
         dicatatPada: DateTime.now(),

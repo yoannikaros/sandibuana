@@ -82,7 +82,7 @@ class PupukProvider with ChangeNotifier {
       _error = null;
       
       await _pupukService.tambahJenisPupuk(pupuk);
-      await loadJenisPupuk(); // Refresh list
+      await loadJenisPupukAktif(); // Refresh list
       return true;
     } catch (e) {
       _error = e.toString();
@@ -100,7 +100,7 @@ class PupukProvider with ChangeNotifier {
       _error = null;
       
       await _pupukService.updateJenisPupuk(id, pupuk);
-      await loadJenisPupuk(); // Refresh list
+      await loadJenisPupukAktif(); // Refresh list
       return true;
     } catch (e) {
       _error = e.toString();
@@ -118,7 +118,7 @@ class PupukProvider with ChangeNotifier {
       _error = null;
       
       await _pupukService.hapusJenisPupuk(id);
-      await loadJenisPupuk(); // Refresh list
+      await loadJenisPupukAktif(); // Refresh list
       return true;
     } catch (e) {
       _error = e.toString();
@@ -137,6 +137,75 @@ class PupukProvider with ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       return null;
+    }
+  }
+
+  // ========================================
+  // STOK PUPUK METHODS
+  // ========================================
+
+  // Update stok pupuk
+  Future<bool> updateStokPupuk(String id, double stokBaru) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      await _pupukService.updateStokPupuk(id, stokBaru);
+      await loadJenisPupukAktif(); // Refresh list
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Tambah stok pupuk
+  Future<bool> tambahStokPupuk(String id, double jumlahTambah) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      await _pupukService.tambahStokPupuk(id, jumlahTambah);
+      await loadJenisPupukAktif(); // Refresh list
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Kurangi stok pupuk
+  Future<bool> kurangiStokPupuk(String id, double jumlahKurang) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      await _pupukService.kurangiStokPupuk(id, jumlahKurang);
+      await loadJenisPupukAktif(); // Refresh list
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get pupuk dengan stok rendah
+  Future<List<JenisPupukModel>> getPupukStokRendah({double batasMinimum = 10.0}) async {
+    try {
+      return await _pupukService.getPupukStokRendah(batasMinimum: batasMinimum);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return [];
     }
   }
   

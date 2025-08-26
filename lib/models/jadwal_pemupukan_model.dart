@@ -5,10 +5,10 @@ class JadwalPemupukanModel {
   final DateTime bulanTahun; // format: YYYY-MM-01
   final int mingguKe; // 1-4
   final int hariDalamMinggu; // 1=Senin, 2=Selasa, dst
-  final String perlakuanPupuk;
-  final String? perlakuanTambahan;
+  final String namaSayur;
   final String? catatan;
   final String? idPembenihan; // Reference to catatan_pembenihan
+  final String? idPenanaman; // Reference to penanaman_sayur
   final bool sudahSelesai;
   final String? diselesaikanOleh;
   final DateTime? diselesaikanPada;
@@ -20,10 +20,10 @@ class JadwalPemupukanModel {
     required this.bulanTahun,
     required this.mingguKe,
     required this.hariDalamMinggu,
-    required this.perlakuanPupuk,
-    this.perlakuanTambahan,
+    required this.namaSayur,
     this.catatan,
     this.idPembenihan,
+    this.idPenanaman,
     this.sudahSelesai = false,
     this.diselesaikanOleh,
     this.diselesaikanPada,
@@ -40,10 +40,10 @@ class JadwalPemupukanModel {
       bulanTahun: (data['bulan_tahun'] as Timestamp).toDate(),
       mingguKe: data['minggu_ke'] ?? 1,
       hariDalamMinggu: data['hari_dalam_minggu'] ?? 1,
-      perlakuanPupuk: data['perlakuan_pupuk'] ?? '',
-      perlakuanTambahan: data['perlakuan_tambahan'],
+      namaSayur: data['nama_sayur'] ?? '',
       catatan: data['catatan'],
       idPembenihan: data['id_pembenihan'],
+      idPenanaman: data['id_penanaman'],
       sudahSelesai: data['sudah_selesai'] ?? false,
       diselesaikanOleh: data['diselesaikan_oleh'],
       diselesaikanPada: data['diselesaikan_pada'] != null 
@@ -60,10 +60,10 @@ class JadwalPemupukanModel {
       'bulan_tahun': Timestamp.fromDate(bulanTahun),
       'minggu_ke': mingguKe,
       'hari_dalam_minggu': hariDalamMinggu,
-      'perlakuan_pupuk': perlakuanPupuk,
-      'perlakuan_tambahan': perlakuanTambahan,
+      'nama_sayur': namaSayur,
       'catatan': catatan,
       'id_pembenihan': idPembenihan,
+      'id_penanaman': idPenanaman,
       'sudah_selesai': sudahSelesai,
       'diselesaikan_oleh': diselesaikanOleh,
       'diselesaikan_pada': diselesaikanPada != null 
@@ -80,10 +80,10 @@ class JadwalPemupukanModel {
     DateTime? bulanTahun,
     int? mingguKe,
     int? hariDalamMinggu,
-    String? perlakuanPupuk,
-    String? perlakuanTambahan,
+    String? namaSayur,
     String? catatan,
     String? idPembenihan,
+    String? idPenanaman,
     bool? sudahSelesai,
     String? diselesaikanOleh,
     DateTime? diselesaikanPada,
@@ -95,10 +95,10 @@ class JadwalPemupukanModel {
       bulanTahun: bulanTahun ?? this.bulanTahun,
       mingguKe: mingguKe ?? this.mingguKe,
       hariDalamMinggu: hariDalamMinggu ?? this.hariDalamMinggu,
-      perlakuanPupuk: perlakuanPupuk ?? this.perlakuanPupuk,
-      perlakuanTambahan: perlakuanTambahan ?? this.perlakuanTambahan,
+      namaSayur: namaSayur ?? this.namaSayur,
       catatan: catatan ?? this.catatan,
       idPembenihan: idPembenihan ?? this.idPembenihan,
+      idPenanaman: idPenanaman ?? this.idPenanaman,
       sudahSelesai: sudahSelesai ?? this.sudahSelesai,
       diselesaikanOleh: diselesaikanOleh ?? this.diselesaikanOleh,
       diselesaikanPada: diselesaikanPada ?? this.diselesaikanPada,
@@ -215,9 +215,46 @@ class JadwalPemupukanModel {
     return 2; // Medium priority
   }
 
+  // Method untuk mendapatkan nama sayur dari relasi penanaman
+  String getDisplayNamaSayur(List<dynamic>? penanamanSayurList) {
+    if (idPenanaman != null && penanamanSayurList != null) {
+      try {
+        final penanaman = penanamanSayurList.firstWhere(
+          (p) => p.idPenanaman == idPenanaman,
+          orElse: () => null,
+        );
+        if (penanaman != null) {
+          return penanaman.jenisSayur;
+        }
+      } catch (e) {
+        // Fallback jika terjadi error
+      }
+    }
+    // Fallback ke nama sayur manual jika tidak ada relasi
+    return namaSayur;
+  }
+
+  // Method untuk mendapatkan detail penanaman sayur
+  String getDisplayDetailPenanaman(List<dynamic>? penanamanSayurList) {
+    if (idPenanaman != null && penanamanSayurList != null) {
+      try {
+        final penanaman = penanamanSayurList.firstWhere(
+          (p) => p.idPenanaman == idPenanaman,
+          orElse: () => null,
+        );
+        if (penanaman != null) {
+          return 'Penanaman: ${penanaman.jenisSayur} (${penanaman.tahapPertumbuhan})';
+        }
+      } catch (e) {
+        // Fallback jika terjadi error
+      }
+    }
+    return 'Tidak terkait dengan penanaman';
+  }
+
   @override
   String toString() {
-    return 'JadwalPemupukanModel(idJadwal: $idJadwal, bulanTahun: $bulanTahun, mingguKe: $mingguKe, hariDalamMinggu: $hariDalamMinggu, perlakuanPupuk: $perlakuanPupuk, sudahSelesai: $sudahSelesai)';
+    return 'JadwalPemupukanModel(idJadwal: $idJadwal, bulanTahun: $bulanTahun, mingguKe: $mingguKe, hariDalamMinggu: $hariDalamMinggu, namaSayur: $namaSayur, sudahSelesai: $sudahSelesai)';
   }
 
   @override

@@ -67,7 +67,7 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
               color: Colors.green.shade50,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, 2),
@@ -215,7 +215,7 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                           );
                       
                       return benih.namaBenih.toLowerCase().contains(_searchQuery) ||
-                             (catatan.kodeBatch?.toLowerCase().contains(_searchQuery) ?? false);
+                             catatan.kodeBatch.toLowerCase().contains(_searchQuery);
                     })
                     .toList();
 
@@ -354,7 +354,7 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
+                                color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: statusColor),
                               ),
@@ -387,24 +387,7 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Semai: ${DateFormat('dd/MM/yyyy').format(catatan.tanggalSemai)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
+
                       ],
                     ),
                   ),
@@ -466,6 +449,13 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         if (tandon != null) ...[
                           const SizedBox(height: 4),
                           Text(
@@ -492,16 +482,6 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                             'Media Tanam: ${catatan.mediaTanam}',
                             style: TextStyle(
                               color: Colors.brown[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        if (catatan.tanggalPanenTarget != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Target Panen: ${DateFormat('dd/MM/yyyy').format(catatan.tanggalPanenTarget!)}',
-                            style: TextStyle(
-                              color: Colors.orange[600],
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -583,7 +563,6 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
   }
 
   void _showDeleteConfirmation(CatatanPembenihanModel catatan) {
-    final scaffoldContext = context;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -600,12 +579,12 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
               
               if (!mounted) return;
               
-              final benihProvider = Provider.of<BenihProvider>(scaffoldContext, listen: false);
+              final benihProvider = Provider.of<BenihProvider>(context, listen: false);
               final success = await benihProvider.hapusCatatanPembenihan(catatan.idPembenihan);
               
               if (mounted) {
                 if (success) {
-                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Catatan pembenihan berhasil dihapus'),
                       backgroundColor: Colors.green,
@@ -615,7 +594,7 @@ class _CatatanPembenihanScreenState extends State<CatatanPembenihanScreen> {
                     _loadData();
                   }
                 } else {
-                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Gagal menghapus catatan pembenihan'),
                       backgroundColor: Colors.red,
@@ -658,8 +637,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
   final TextEditingController catatanController = TextEditingController();
   
   DateTime selectedTanggalPembenihan = DateTime.now();
-  DateTime selectedTanggalSemai = DateTime.now();
-  DateTime? selectedTanggalPanenTarget;
+
   String? selectedIdBenih;
   String? selectedIdTandon;
   String? selectedIdPupuk;
@@ -671,18 +649,20 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
     super.initState();
     if (widget.catatan != null) {
       final catatan = widget.catatan!;
-      selectedTanggalPembenihan = catatan.tanggalPembenihan;
-      selectedTanggalSemai = catatan.tanggalSemai;
+      selectedTanggalPembenihan = catatan.tanggalPembenihan; // Use existing date for edit
       selectedIdBenih = catatan.idBenih;
       selectedIdTandon = catatan.idTandon;
       selectedIdPupuk = catatan.idPupuk;
       selectedStatus = catatan.status;
       jumlahController.text = catatan.jumlah.toString();
       satuanController.text = catatan.satuan ?? '';
-      kodeBatchController.text = catatan.kodeBatch;
+      kodeBatchController.text = catatan.kodeBatch; // Keep existing batch code for edit
       mediaTanamController.text = catatan.mediaTanam ?? '';
-      selectedTanggalPanenTarget = catatan.tanggalPanenTarget;
+
       catatanController.text = catatan.catatan ?? '';
+    } else {
+      // Auto-generate batch code for new entry
+      kodeBatchController.text = _generateBatchCode();
     }
   }
 
@@ -699,42 +679,44 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Tanggal Pembenihan
-                InkWell(
-                  onTap: () => _selectTanggalPembenihan(),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Tanggal Pembenihan',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                    child: Text(
-                      DateFormat('dd/MM/yyyy').format(selectedTanggalPembenihan),
-                    ),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Tanggal Pembenihan',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
                   ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Tanggal Semai
-                InkWell(
-                  onTap: () => _selectTanggalSemai(),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Tanggal Semai',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                    child: Text(
-                      DateFormat('dd/MM/yyyy').format(selectedTanggalSemai),
-                    ),
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: DateFormat('dd/MM/yyyy').format(selectedTanggalPembenihan),
                   ),
+                  onTap: _selectTanggalPembenihan,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Pilih tanggal pembenihan';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 
                 // Jenis Benih
                 Consumer<BenihProvider>(
                   builder: (context, benihProvider, child) {
+                    // Validate that selectedIdBenih exists in current list
+                    final benihExists = selectedIdBenih == null || 
+                        benihProvider.jenisBenihList.any((benih) => benih.idBenih == selectedIdBenih);
+                    
+                    // Reset selectedIdBenih if it doesn't exist in current list
+                    if (!benihExists) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        setState(() {
+                          selectedIdBenih = null;
+                        });
+                      });
+                    }
+                    
                     return DropdownButtonFormField<String>(
-                      value: selectedIdBenih,
+                      value: benihExists ? selectedIdBenih : null,
                       decoration: const InputDecoration(
                         labelText: 'Jenis Benih',
                         border: OutlineInputBorder(),
@@ -764,8 +746,21 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                 // Tandon Air
                 Consumer<TandonProvider>(
                   builder: (context, tandonProvider, child) {
+                    // Validate that selectedIdTandon exists in current list
+                    final tandonExists = selectedIdTandon == null || 
+                        tandonProvider.tandonAirList.any((tandon) => tandon.id == selectedIdTandon);
+                    
+                    // Reset selectedIdTandon if it doesn't exist in current list
+                    if (!tandonExists) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        setState(() {
+                          selectedIdTandon = null;
+                        });
+                      });
+                    }
+                    
                     return DropdownButtonFormField<String>(
-                      value: selectedIdTandon,
+                      value: tandonExists ? selectedIdTandon : null,
                       decoration: const InputDecoration(
                         labelText: 'Tandon Air (Opsional)',
                         border: OutlineInputBorder(),
@@ -778,9 +773,9 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                         ...tandonProvider.tandonAirList.map((tandon) {
                           return DropdownMenuItem(
                             value: tandon.id,
-                            child: Text(tandon.namaTandon ?? tandon.kodeTandon),
+                            child: Text(tandon.kodeTandon),
                           );
-                        }).toList(),
+                        }),
                       ],
                       onChanged: (value) {
                         setState(() {
@@ -795,8 +790,21 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                 // Jenis Pupuk
                 Consumer<PupukProvider>(
                   builder: (context, pupukProvider, child) {
+                    // Validate that selectedIdPupuk exists in current list
+                    final pupukExists = selectedIdPupuk == null || 
+                        pupukProvider.jenisPupukAktif.any((pupuk) => pupuk.id == selectedIdPupuk);
+                    
+                    // Reset selectedIdPupuk if it doesn't exist in current list
+                    if (!pupukExists) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        setState(() {
+                          selectedIdPupuk = null;
+                        });
+                      });
+                    }
+                    
                     return DropdownButtonFormField<String>(
-                      value: selectedIdPupuk,
+                      value: pupukExists ? selectedIdPupuk : null,
                       decoration: const InputDecoration(
                         labelText: 'Jenis Pupuk (Opsional)',
                         border: OutlineInputBorder(),
@@ -811,7 +819,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                             value: pupuk.id,
                             child: Text(pupuk.namaPupuk),
                           );
-                        }).toList(),
+                        }),
                       ],
                       onChanged: (value) {
                         setState(() {
@@ -865,22 +873,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                 ),
                 const SizedBox(height: 16),
                 
-                // Kode Batch (Wajib)
-                TextFormField(
-                  controller: kodeBatchController,
-                  decoration: const InputDecoration(
-                    labelText: 'Kode Batch *',
-                    hintText: 'Wajib diisi',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Kode batch wajib diisi';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+
                 
                 // Status
                 DropdownButtonFormField<String>(
@@ -917,24 +910,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
                 ),
                 const SizedBox(height: 16),
                 
-                // Tanggal Panen Target
-                InkWell(
-                  onTap: () => _selectTanggalPanenTarget(),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Tanggal Panen Target',
-                      hintText: 'Opsional',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                    child: Text(
-                      selectedTanggalPanenTarget != null
-                          ? DateFormat('dd/MM/yyyy').format(selectedTanggalPanenTarget!)
-                          : 'Pilih tanggal',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+
                 
                 // Catatan
                 TextFormField(
@@ -970,47 +946,30 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
     );
   }
 
+  String _generateBatchCode() {
+    final now = DateTime.now();
+    final dateStr = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    return 'BTH$dateStr$timeStr';
+  }
+
+
+
   Future<void> _selectTanggalPembenihan() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: selectedTanggalPembenihan,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null && picked != selectedTanggalPembenihan) {
+    if (picked != null) {
       setState(() {
         selectedTanggalPembenihan = picked;
       });
     }
   }
 
-  Future<void> _selectTanggalSemai() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedTanggalSemai,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != selectedTanggalSemai) {
-      setState(() {
-        selectedTanggalSemai = picked;
-      });
-    }
-  }
 
-  Future<void> _selectTanggalPanenTarget() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedTanggalPanenTarget ?? DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        selectedTanggalPanenTarget = picked;
-      });
-    }
-  }
 
   Future<void> _saveCatatan() async {
     if (!_formKey.currentState!.validate()) {
@@ -1030,7 +989,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
         // Add new
         success = await benihProvider.tambahCatatanPembenihan(
           tanggalPembenihan: selectedTanggalPembenihan,
-          tanggalSemai: selectedTanggalSemai,
+          tanggalSemai: selectedTanggalPembenihan,
           idBenih: selectedIdBenih!,
           idTandon: selectedIdTandon,
           idPupuk: selectedIdPupuk,
@@ -1039,7 +998,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
           satuan: satuanController.text.isNotEmpty ? satuanController.text : null,
           kodeBatch: kodeBatchController.text,
           status: selectedStatus,
-          tanggalPanenTarget: selectedTanggalPanenTarget,
+
           catatan: catatanController.text.isNotEmpty ? catatanController.text : null,
           dicatatOleh: authProvider.user?.idPengguna ?? '',
         );
@@ -1049,7 +1008,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
           widget.catatan!.idPembenihan,
           {
             'tanggal_pembenihan': selectedTanggalPembenihan,
-            'tanggal_semai': selectedTanggalSemai,
+            'tanggal_semai': selectedTanggalPembenihan,
             'id_benih': selectedIdBenih!,
             'id_tandon': selectedIdTandon,
             'id_pupuk': selectedIdPupuk,
@@ -1058,7 +1017,7 @@ class _AddEditCatatanDialogState extends State<_AddEditCatatanDialog> {
             'satuan': satuanController.text.isNotEmpty ? satuanController.text : null,
             'kode_batch': kodeBatchController.text,
             'status': selectedStatus,
-            'tanggal_panen_target': selectedTanggalPanenTarget,
+
             'catatan': catatanController.text.isNotEmpty ? catatanController.text : null,
           },
         );

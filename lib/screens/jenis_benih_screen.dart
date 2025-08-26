@@ -16,9 +16,17 @@ class _JenisBenihScreenState extends State<JenisBenihScreen> {
     super.initState();
     // Load data saat screen pertama kali dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final benihProvider = Provider.of<BenihProvider>(context, listen: false);
-      benihProvider.initializeDefaultData();
+      _initializeData();
     });
+  }
+
+  Future<void> _initializeData() async {
+    try {
+      final benihProvider = Provider.of<BenihProvider>(context, listen: false);
+      await benihProvider.initializeDefaultData();
+    } catch (e) {
+      print('Error initializing benih data: $e');
+    }
   }
 
   @override

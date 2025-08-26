@@ -289,6 +289,48 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "monitoring_nutrisi_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id_tandon",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "tanggal_monitoring",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "monitoring_nutrisi_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id_pembenihan",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_monitoring",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "monitoring_nutrisi_harian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id_penanaman",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tanggal_monitoring",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

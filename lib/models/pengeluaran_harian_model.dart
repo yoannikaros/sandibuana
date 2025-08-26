@@ -45,7 +45,7 @@ class PengeluaranHarianModel {
   // Convert from Map
   factory PengeluaranHarianModel.fromMap(Map<String, dynamic> map) {
     return PengeluaranHarianModel(
-      id: map['id'] ?? '',
+      id: map['id']?.toString() ?? '',
       tanggalPengeluaran: map['tanggal_pengeluaran'] is Timestamp
           ? (map['tanggal_pengeluaran'] as Timestamp).toDate()
           : DateTime.parse(map['tanggal_pengeluaran']),
@@ -81,6 +81,21 @@ class PengeluaranHarianModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'tanggal_pengeluaran': tanggalPengeluaran.toIso8601String(),
+      'kategori': kategori,
+      'keterangan': keterangan,
+      'jumlah': jumlah,
+      'nomor_nota': nomorNota,
+      'pemasok': pemasok,
+      'catatan': catatan,
+      'dicatat_oleh': dicatatOleh,
+      'dicatat_pada': dicatatPada.toIso8601String(),
+    };
+  }
+
+  // Convert to Map for database insert (without id)
+  Map<String, dynamic> toMapForInsert() {
+    return {
       'tanggal_pengeluaran': tanggalPengeluaran.toIso8601String(),
       'kategori': kategori,
       'keterangan': keterangan,

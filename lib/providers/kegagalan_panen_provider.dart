@@ -302,7 +302,10 @@ class KegagalanPanenProvider with ChangeNotifier {
       ),
     );
     
-    return '${penanaman.jenisSayur} (${penanaman.idPenanaman.substring(0, 8)}...)';
+    final displayId = penanaman.idPenanaman.length > 8 
+        ? penanaman.idPenanaman.substring(0, 8) + '...'
+        : penanaman.idPenanaman;
+    return '${penanaman.jenisSayur} ($displayId)';
   }
 
   // Refresh data

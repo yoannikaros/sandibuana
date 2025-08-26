@@ -1,24 +1,24 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 import '../models/tipe_pupuk_model.dart';
+import 'database_helper.dart';
 
 class TipePupukService {
-  static Database? _database;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   static const String _tableName = 'tipe_pupuk';
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
-  }
-
-  Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'tipe_pupuk.db');
-    return await openDatabase(
-      path,
-      version: 2,
-      onCreate: _createTable,
+    final db = await _dbHelper.database;
+    
+    // Check if table exists, if not create it
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='$_tableName'"
     );
+    
+    if (tables.isEmpty) {
+      await _createTable(db, 1);
+    }
+    
+    return db;
   }
 
   Future<void> _createTable(Database db, int version) async {
